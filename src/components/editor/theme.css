@@ -1,0 +1,51 @@
+.jtp__bold {
+    font-weight: bold;
+}
+.jtp__italic {
+    font-style: italic;
+}
+.jtp__strikethrough {
+    text-decoration: line-through;
+}
+.jtp__underline {
+    text-decoration: underline;
+}
+.jtp__underline-strikethrough {
+    text-decoration: line-through underline;
+}
+
+p > sub {
+    font-size: inherit;
+    vertical-align: inherit;
+    bottom: 0;
+    /* color: transparent; */
+}
+
+p > sup {
+    font-size: inherit;
+    vertical-align: inherit;
+    top: 0;
+    background: rgba(255, 212, 0, 0.24);
+    border-bottom: 2px solid rgba(255, 212, 0, 0.3);
+}
+
+.jtp__mark {
+    padding: 0;
+    box-sizing: border-box;
+    background: rgba(255, 212, 0, 0.24);
+    border-bottom: 2px solid rgba(255, 212, 0, 0.3);
+}
+.jtp__mark-overlap {
+    background: rgba(255, 212, 0, 0.3);
+    border-bottom: 2px solid rgba(255, 212, 0, 0.7);
+}
+
+.jtp__mark.selected {
+    background: rgba(255, 212, 0, 0.5);
+    border-bottom: 2px solid rgba(255, 212, 0, 1);
+}
+
+.jtp__mark-overlap.selected {
+    background: rgba(255, 212, 0, 0.7);
+    border-bottom: 2px solid rgba(255, 212, 0, 0.7);
+}
