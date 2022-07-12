@@ -2,9 +2,9 @@ import { useEffect } from "react"
 import styled from "styled-components"
 import { Editor } from "./components/editor"
 import { cacheEventMap, nodeKeyMap } from "./components/editor/plugins/CommentPlugin"
-import useOnce from "./hooks/useOnce"
 import { AppContext, useAppReducer } from "./store"
 import { toObject } from "./utils"
+import * as idbKeyval from 'idb-keyval'
 
 const H1 = styled.h1`
     margin-top: 16px;
@@ -36,14 +36,15 @@ function App() {
 
     useEffect(() => {
         try {
-            const nodeKeyMapObj = JSON.parse(localStorage.getItem('__jte_nodeKeyMap__')!)
-            const cacheEventMapObj = JSON.parse(localStorage.getItem('__jte_cacheEventMap__')!)
-            
-            Object.keys(nodeKeyMapObj).forEach(k => {
-                nodeKeyMap.set(k, nodeKeyMapObj[k])
+            idbKeyval.get('__jte_nodeKeyMap__').then(nodeKeyMapObj => {
+                Object.keys(nodeKeyMapObj || {}).forEach(k => {
+                    nodeKeyMap.set(k, nodeKeyMapObj[k])
+                })
             })
-            Object.keys(cacheEventMapObj).forEach(k => {
-                cacheEventMap.set(k, cacheEventMapObj[k])
+            idbKeyval.get('__jte_cacheEventMap__').then(cacheEventMapObj => {
+                Object.keys(cacheEventMapObj || {}).forEach(k => {
+                    cacheEventMap.set(k, cacheEventMapObj[k])
+                })
             })
         } catch (error) {}
     }, [])
@@ -51,9 +52,9 @@ function App() {
     // 卸载前保存数据
     useEffect(() => {
         function handle(e: any) {
-            localStorage.setItem('__jte__', JSON.stringify(state))
-            localStorage.setItem('__jte_nodeKeyMap__', JSON.stringify(toObject(nodeKeyMap)))
-            localStorage.setItem('__jte_cacheEventMap__', JSON.stringify(toObject(cacheEventMap)))
+            idbKeyval.set('__jte__', state),
+            idbKeyval.set('__jte_nodeKeyMap__', toObject(nodeKeyMap)),
+            idbKeyval.set('__jte_cacheEventMap__', toObject(cacheEventMap))
             e.returnValue = 'delay'
         }
         window.addEventListener('beforeunload', handle)

@@ -6,7 +6,6 @@ import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from '@lexical/selection';
-import 'rc-color-picker/assets/index.css';
 import { BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined, QuestionCircleOutlined, BgColorsOutlined, FunctionOutlined, UserOutlined, CopyOutlined, UploadOutlined, ClearOutlined, UndoOutlined, RedoOutlined, SaveOutlined, PlusOutlined, FontSizeOutlined, SettingOutlined, ReloadOutlined } from '@ant-design/icons';
 import clsx from 'clsx';
 import { $getNearestBlockElementAncestorOrThrow, mergeRegister } from '@lexical/utils';
@@ -18,6 +17,7 @@ import { $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
 import { Dropdown, Menu, message, Modal } from 'antd';
 import { toStringify, transform } from '../../../core/tellraw';
 import useOnce from '../../../hooks/useOnce';
+import * as idbKeyval from 'idb-keyval'
 
 const Wrapper = styled.div`
     margin-bottom: 8px;
@@ -153,8 +153,7 @@ export default function ToolbarPlugin() {
     useOnce((done) => {
         done()
         // 加载数据
-        try {
-            const localState = JSON.parse(localStorage.getItem('__jte__') || '')
+        idbKeyval.get('__jte__').then(localState => {
             if (localState) {
                 // 加载本地的资源
                 dispatch({
@@ -176,7 +175,7 @@ export default function ToolbarPlugin() {
                     }
                 })
             }
-        } catch (error) {}
+        })
     }, [])
 
     const clearFormatting = useCallback(() => {
@@ -484,9 +483,9 @@ export default function ToolbarPlugin() {
                     Modal.warning({
                         title: '该操作会重置所有用户信息，确定吗？',
                         onOk() {
-                            localStorage.removeItem('__jte__')
-                            localStorage.removeItem('__jte_cacheEventMap__')
-                            localStorage.removeItem('__jte_nodeKeyMap__')
+                            idbKeyval.del('__jte__')
+                            idbKeyval.del('__jte_cacheEventMap__')
+                            idbKeyval.del('__jte_nodeKeyMap__')
                             dispatch({
                                 type: 'Reset',
                             })

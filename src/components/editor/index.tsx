@@ -25,7 +25,7 @@ const Wrapper = styled.div`
         margin: 0;
     }
     .jtp__editor {
-        font-family: "Minecraft";
+        font-family: "Minecraft", "Minecraft-AE";
         font-size: 16px;
     }
 `

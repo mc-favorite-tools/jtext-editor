@@ -23,5 +23,30 @@ body {
 
 @font-face {
     font-family: "Minecraft";
-    src: url("./font/Mojang-Regular.ttf");
+    src: url("./font/Minecraft-Regular.otf");
+    font-weight: normal;
+}
+
+@font-face {
+    font-family: "Minecraft";
+    src: url("./font/Minecraft-Italic.otf");
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Minecraft";
+    src: url("./font/Minecraft-Bold.otf");
+    font-weight: Bold;
+}
+
+@font-face {
+    font-family: "Minecraft";
+    src: url("./font/Minecraft-BoldItalic.otf");
+    font-weight: Bold;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Minecraft-AE";
+    src: url("./font/Minecraft-AE.ttf");
 }
