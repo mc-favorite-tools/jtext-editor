@@ -1,4 +1,4 @@
-import { $createRangeSelection, $getRoot, $getSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_LOW, createCommand, FORMAT_TEXT_COMMAND,  LexicalCommand, ParagraphNode, REDO_COMMAND, SELECTION_CHANGE_COMMAND, SerializedLexicalNode, TextNode, UNDO_COMMAND } from 'lexical';
+import { $createRangeSelection, $getRoot, $getSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_LOW, createCommand, FORMAT_TEXT_COMMAND,  LexicalCommand, NodeKey, ParagraphNode, REDO_COMMAND, SELECTION_CHANGE_COMMAND, SerializedLexicalNode, TextNode, UNDO_COMMAND } from 'lexical';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
@@ -11,7 +11,7 @@ import { BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined,
 import clsx from 'clsx';
 import { $getNearestBlockElementAncestorOrThrow, mergeRegister } from '@lexical/utils';
 import ColorPicker from '../../color-picker';
-import { INSERT_INLINE_COMMAND } from './CommentPlugin';
+import { cacheEventMap, INSERT_INLINE_COMMAND, nodeKeyMap } from './CommentPlugin';
 import { AppContext } from '../../../store';
 import { copy, createTime, createUID } from '../../../utils';
 import { $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
@@ -142,6 +142,7 @@ export default function ToolbarPlugin() {
         },
         [activeEditor],
     )
+
     const onFontColorSelect = useCallback(
         (value: string) => {
             applyStyleText({color: value})
@@ -178,27 +179,6 @@ export default function ToolbarPlugin() {
         } catch (error) {}
     }, [])
 
-    useEffect(() => {
-        // 保存当前编辑器区域的数据
-        const editorState = editor.getEditorState()
-        const data = editorState.toJSON()
-        // 保存到临时变量中
-        dispatch({
-            type: 'UpdateCurrentJson',
-            currentJson: (
-                state.jsonIndex === -1 && text
-                    ? {
-                        id: createUID(),
-                        data,
-                        text,
-                        time: createTime(),
-                    }
-                    : null
-            ),
-        })
-    }, [state.jsonIndex, editor, text])
-
-
     const clearFormatting = useCallback(() => {
         activeEditor.update(() => {
             const selection = $getSelection()
@@ -211,16 +191,12 @@ export default function ToolbarPlugin() {
                     }
                     if ($isMarkNode(node)) {
                         const id = node.getIDs()[0]
-                        const nodeMap = { ...state.nodeMap }
-                        delete nodeMap[id]
-                        dispatch({
-                            type: 'UpdateNodeMap',
-                            nodeMap,
-                        })
-                        dispatch({
-                            type: 'RemoveEvent',
-                            id,
-                        })
+                        nodeKeyMap.delete(id)
+                        cacheEventMap.delete(id)
+                        // dispatch({
+                        //     type: 'RemoveEvent',
+                        //     id,
+                        // })
                         $unwrapMarkNode(node)
                     }
                 })
@@ -228,62 +204,142 @@ export default function ToolbarPlugin() {
         })
     }, [activeEditor])
 
+    useEffect(() => {
+        // 保存当前编辑器区域的数据
+        const editorState = editor.getEditorState()
+
+        editorState.read(() => {
+            const data = editorState.toJSON()
+            const nodeKeys: NodeKey[] = []
+            const nodes = $getRoot().getChildren().map(item => (item as ParagraphNode).getChildren()).flat()
+            nodes.forEach(node => {
+                if ($isMarkNode(node)) {
+                    nodeKeys.push(node.getIDs()[0])
+                }
+            })
+            
+            // 保存到临时变量中
+            dispatch({
+                type: 'UpdateCurrentJson',
+                currentJson: (
+                    state.jsonIndex === -1 && text
+                        ? {
+                            id: createUID(),
+                            data,
+                            text,
+                            nodeKeys,
+                            time: createTime(),
+                        }
+                        : null
+                ),
+            })
+        })
+    }, [state.jsonIndex, editor, text])
+
     const save = useCallback(() => {
         const editorState = editor.getEditorState()
-        const data = editorState.toJSON()
-        if (state.jsonIndex !== -1) {
-            const json = state.jsonList[state.jsonIndex]
-            dispatch({
-                type: 'UpdateJson',
-                json: {
-                    ...json,
-                    data,
-                    text,
-                    time: createTime(),
-                },
-            })
-        } else {
-            add()
-        }
+        editorState.read(() => {
+            const data = editorState.toJSON()
+            if (state.jsonIndex !== -1) {
+                const json = state.jsonList[state.jsonIndex]
+                const nodeKeys: NodeKey[] = []
+                const nodes = $getRoot().getChildren().map(item => (item as ParagraphNode).getChildren()).flat()
+                nodes.forEach(node => {
+                    if ($isMarkNode(node)) {
+                        nodeKeys.push(node.getIDs()[0])
+                    }
+                })
+                
+                dispatch({
+                    type: 'UpdateJson',
+                    json: {
+                        ...json,
+                        data,
+                        text,
+                        nodeKeys,
+                        time: createTime(),
+                    },
+                })
+            } else {
+                add()
+            }
+        })
     }, [editor, state.jsonIndex, state.jsonList, text])
 
     const add = useCallback(() => {
         const editorState = editor.getEditorState()
-        const data = editorState.toJSON()
-
-        if (state.jsonIndex !== -1) {
-            const json = state.jsonList[state.jsonIndex]
-            dispatch({
-                type: 'UpdateJson',
-                json: {
-                    ...json,
-                    data,
-                    time: createTime(),
-                },
-            })
-        } else {
-            dispatch({
-                type: 'AddJson',
-                json: {
-                    id: createUID(),
-                    data,
-                    text,
-                    time: createTime(),
-                }
-            })
-        }
-
-        dispatch({
-            type: 'UpdateJsonIndex',
-            index: -1,
-        })
+        
+        // cache
+        // state.eventList.forEach(item => {
+        //     cacheEventMap.set(item.id, item)
+        // })
 
         editor.update(() => {
-            const root = $getRoot()
-            root.clear()
+            const data = editorState.toJSON()
+
+            const nodeKeys: NodeKey[] = []
+            const nodes = $getRoot().getChildren().map(item => (item as ParagraphNode).getChildren()).flat()
+            nodes.forEach(node => {
+                if ($isMarkNode(node)) {
+                    nodeKeys.push(node.getIDs()[0])
+                }
+            })
+
+            if (state.jsonIndex !== -1) {
+                const json = state.jsonList[state.jsonIndex]
+                dispatch({
+                    type: 'UpdateJson',
+                    json: {
+                        ...json,
+                        data,
+                        nodeKeys,
+                        time: createTime(),
+                    },
+                })
+            } else {
+                dispatch({
+                    type: 'AddJson',
+                    json: {
+                        id: createUID(),
+                        data,
+                        text,
+                        nodeKeys,
+                        time: createTime(),
+                    }
+                })
+            }
+    
+            dispatch({
+                type: 'UpdateJsonIndex',
+                index: -1,
+            })
+
+            $getRoot().clear()
         })
         
     }, [editor, state.jsonIndex, state.jsonList, text])
+    
+    const activeJson = useMemo(
+        () => {
+            if (state.jsonIndex > -1) {
+                return state.jsonList[state.jsonIndex]
+            }
+            return state.currentJson
+        },
+        [state.currentJson, state.jsonIndex, state.jsonList]
+    )
+    
+    const eventList = useMemo(
+        () => {
+            if (activeJson) {
+                return activeJson.nodeKeys.map(nodeKey => {
+                    return cacheEventMap.get(nodeKey)!
+                })
+            }
+            return []
+        },
+        [activeJson, state.trigger]
+    )
 
     return (
         <Wrapper>
@@ -376,7 +432,7 @@ export default function ToolbarPlugin() {
                                         isFirstParagraphNode = false
                                         continue
                                     }
-                                    if (e.key === 'tellraw') {
+                                    if (e.key === 'tellraw' || e.key === 'nbt') {
                                         const node = tmpSerializedNode[tmpSerializedNode.length - 1]  as any
                                         if (node.type === 'text') {
                                             node.text += '\n'
@@ -393,13 +449,17 @@ export default function ToolbarPlugin() {
 
                             let str = ''
                             if (e.key === 'tellraw') {
-                                const text = toStringify(transform(result[0], state.eventList))
+                                const text = toStringify(transform(result[0], eventList))
                                 str = state.tplMap.tellraw.replace('%s', text)
                             } else if (e.key === 'sign') {
-                                const text = result.map((item, index) => `Text${index + 1}:'[${toStringify(transform(item, state.eventList))}]'`).join(',')
+                                if (result.length > 4) {
+                                    message.warning('sign 最多支持四行文本！')
+                                    return
+                                }
+                                const text = result.map((item, index) => `Text${index + 1}:'[${toStringify(transform(item, eventList))}]'`).join(',')
                                 str = state.tplMap.sign.replace('%s', text)
                             } else {
-                                str = '["",' + toStringify(transform(result[0], state.eventList)) + ']'
+                                str = '["",' + toStringify(transform(result[0], eventList)) + ']'
                             }
                             copy(str)
                             message.success('已复制到剪贴版')
@@ -424,6 +484,9 @@ export default function ToolbarPlugin() {
                     Modal.warning({
                         title: '该操作会重置所有用户信息，确定吗？',
                         onOk() {
+                            localStorage.removeItem('__jte__')
+                            localStorage.removeItem('__jte_cacheEventMap__')
+                            localStorage.removeItem('__jte_nodeKeyMap__')
                             dispatch({
                                 type: 'Reset',
                             })

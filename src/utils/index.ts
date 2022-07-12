@@ -34,3 +34,19 @@ export function clone<T>(obj: T): T {
 export function isObject(obj: any) {
     return obj && typeof obj === 'object'
 }
+
+export function toMap<K extends string | number | symbol, V>(obj: any = {}) {
+    const map = new Map<K, V>()
+    Object.keys(obj).forEach((k: any) => {
+        map.set(k, obj[k])
+    })
+    return map
+}
+
+export function toObject<K extends string | number | symbol, V>(map: Map<K, V>): Record<K, V> {
+    const obj: any = {}
+    map.forEach((v, k) => {
+        obj[k] = v
+    })
+    return obj
+}

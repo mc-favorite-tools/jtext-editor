@@ -2,12 +2,13 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { Input, message, Select, Table } from "antd";
 import { ColumnType } from "antd/lib/table";
 import clsx from "clsx";
-import { SerializedEditorState } from "lexical";
+import { NodeKey, SerializedEditorState } from "lexical";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { toJSONText, toStringify } from "../../../../core/tellraw";
-import { AppContext, defaultTplMap } from "../../../../store";
+import { AppContext, defaultTplMap, JsonTile } from "../../../../store";
 import { copy } from "../../../../utils";
+import { cacheEventMap } from "../CommentPlugin";
 
 const Wrapper = styled.div`
     a.disabled {
@@ -29,13 +30,15 @@ export default function JsonTablePlugin() {
     const [state, dispatch] = useContext(AppContext)
     const [editor] = useLexicalComposerContext()
 
-    const format = useCallback((data: SerializedEditorState) => toStringify(toJSONText(data, state.eventList)), [state.eventList])
+    const format = useCallback(
+        (data: SerializedEditorState) => {
+            const eventList = Array.from(cacheEventMap.values())
+            return toStringify(toJSONText(data, eventList))
+        },
+        [state.jsonList]
+    )
 
-    const columns: ColumnType<{
-        data: SerializedEditorState
-        id: string
-        time: string
-    }>[] = [
+    const columns: ColumnType<JsonTile>[] = [
         {
             title: '序号',
             width: 50,
@@ -163,7 +166,7 @@ export default function JsonTablePlugin() {
         setSelectedRowItems(items)
     }
 
-    const create = useCallback(() => {
+    const create = () => {
         switch (state.tplType) {
             case 'tellraw':
                 return toTellraw()
@@ -176,14 +179,14 @@ export default function JsonTablePlugin() {
             default:
                 return;
         }
-    }, [state.tplType])
+    }
 
     return (
         <Wrapper>
             <div style={{ marginBottom: 16 }}>
                 <Input
                     addonBefore={
-                        <Select defaultValue={defalutTplType} onChange={(tplType) => {
+                        <Select value={state.tplType} defaultValue={defalutTplType} onChange={(tplType) => {
                             dispatch({
                                 type: 'UpdateTplType',
                                 tplType,

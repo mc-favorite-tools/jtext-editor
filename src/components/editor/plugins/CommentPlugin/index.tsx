@@ -7,17 +7,18 @@ import { $getNodeByKey, $getSelection, $isRangeSelection, $isTextNode, COMMAND_P
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createThread, Thread } from './model';
 import { Popup } from './Popup';
-import { JSONEventObject, AppContext } from '../../../../store'
+import { JSONEventObject, AppContext, createJSONEventObject } from '../../../../store'
 
 
 export const INSERT_INLINE_COMMAND: LexicalCommand<void> = createCommand()
+export const cacheEventMap = new Map<string, JSONEventObject>()
+export const nodeKeyMap = new Map<string, NodeKey>()
 
 export default function CommentPlugin() {
     const [editor] = useLexicalComposerContext()
     const [activeID, setActiveID] = useState<string | null>(null)
     const [activeAnchorKey, setActiveAnchorKey] = useState<NodeKey | null>(null)
     const [state, dispatch] = useContext(AppContext)
-    const cacheEventMap = useRef<Map<string, JSONEventObject>>(new Map())
 
     // const remove = useCallback(
     //     (comment: JSONEventObject, thread?: any) => {
@@ -103,7 +104,7 @@ export default function CommentPlugin() {
         // 选择激活的markNode
         const changedElems: HTMLElement[] = [];
         if (activeID) {
-            const key = state.nodeMap[activeID]
+            const key = nodeKeyMap.get(activeID)
             if (key !== undefined) {
                 const elem = editor.getElementByKey(key)
                 if (elem !== null) {
@@ -118,20 +119,22 @@ export default function CommentPlugin() {
                 changedElem.classList.remove('selected')
             }
         };
-    }, [activeID, editor, state.nodeMap])
+    }, [activeID, editor])
 
 
-    useEffect(() => {
-        Object.keys(state.nodeMap).forEach(key => {
-            if (cacheEventMap.current.has(key)) {
-                dispatch({
-                    type: 'AddEvent',
-                    eventListItem: cacheEventMap.current.get(key)!
-                })
-                cacheEventMap.current.delete(key)
-            }
-        })
-    }, [state.nodeMap, state.eventList])
+    // useEffect(() => {
+    //     Object.keys(state.nodeMap).forEach(key => {
+    //         if (cacheEventMap.has(key)) {
+    //             dispatch({
+    //                 type: 'AddEvent',
+    //                 eventListItem: {
+    //                     ...cacheEventMap.get(key)!
+    //                 }
+    //             })
+    //             cacheEventMap.delete(key)
+    //         }
+    //     })
+    // }, [])
 
     useEffect(() => {
         const markNodeKeysToIDs: Record<NodeKey, string> = {}
@@ -162,18 +165,14 @@ export default function CommentPlugin() {
                                 if (mutation === 'created') {
                                     if (cloneId) {
                                         const thread = createThread()
-                                        dispatch({
-                                            type: 'CloneEvent',
-                                            id: thread.id,
-                                            cloneId,
-                                        })
+                                        cacheEventMap.set(cloneId, cacheEventMap.get(thread.id)!)
+                                        // dispatch({
+                                        //     type: 'CloneEvent',
+                                        //     id: thread.id,
+                                        //     cloneId,
+                                        // })
                                         editor.update(() => {
-                                            const nodeMap = { ...state.nodeMap }
-                                            nodeMap[thread.id] = key
-                                            dispatch({
-                                                type: 'UpdateNodeMap',
-                                                nodeMap,
-                                            })
+                                            nodeKeyMap.set(thread.id, key)
                                             node.deleteID(node.getIDs()[0])
                                             node.addID(thread.id)
                                         })
@@ -196,32 +195,26 @@ export default function CommentPlugin() {
                             }
     
                             if (id) {
-                                let markNodeKey = state.nodeMap[id]
+                                let markNodeKey = nodeKeyMap.get(id)
                                 markNodeKeysToIDs[key] = id
     
                                 if (mutation === 'destroyed') {
                                     if (markNodeKey !== undefined) {
-                                        const nodeMap = { ...state.nodeMap }
-                                        delete nodeMap[id]
-                                        cacheEventMap.current.set(id, state.eventList.find(item => item.id === id)!)
-                                        dispatch({
-                                            type: 'UpdateNodeMap',
-                                            nodeMap,
-                                        })
-                                        dispatch({
-                                            type: 'RemoveEvent',
-                                            id,
-                                        })
+                                        nodeKeyMap.delete(id)
+                                        // const nodeMap = { ...state.nodeMap }
+                                        // delete nodeMap[id]
+
+                                        // cacheEventMap.delete(id)
+
+                                        // cacheEventMap.set(id, state.eventList.find(item => item.id === id)!)
+                                        
+                                        // dispatch({
+                                        //     type: 'RemoveEvent',
+                                        //     id,
+                                        // })
                                     }
                                 } else {
-                                    const nodeMap = { ...state.nodeMap }
-                                    if (! nodeMap[id]) {
-                                        nodeMap[id] = key
-                                        dispatch({
-                                            type: 'UpdateNodeMap',
-                                            nodeMap,
-                                        })
-                                    }
+                                    nodeKeyMap.set(id, key)
                                 }
                             }
                         }
@@ -272,13 +265,18 @@ export default function CommentPlugin() {
                     }
                     const thread = createThread()
                     add(thread)
-                    dispatch({ type: 'CreateEvent', id: thread.id })
+                    cacheEventMap.set(thread.id, createJSONEventObject(thread.id))
+                    dispatch({
+                        type: 'AddNodeKey',
+                        nodeKey: thread.id
+                    })
+                    // dispatch({ type: 'CreateEvent', id: thread.id })
                     return true
                 },
                 COMMAND_PRIORITY_EDITOR,
             ),
-        );
-    }, [editor, state.nodeMap])
+        )
+    }, [editor])
 
     return (
         <>

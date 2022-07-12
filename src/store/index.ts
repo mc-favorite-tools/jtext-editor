@@ -21,40 +21,19 @@ export function createJSONEventObject(id = createUID()): JSONEventObject {
     return {
         id,
         type: 'text',
-        clickEvent: {
-            action: 'run_command',
-            value: '',
-        },
-        hoverEvent: {
-            action: 'show_text',
-            value: '',
-        },
-        score: {
-            objective: '',
-            name: '*',
-        },
-        nbt: {
-            type: 'block',
-            value: '',
-            path: '',
-            interpret: false,
-            separator: '',
-        },
-        translate: {
-            translate: '',
-            with: '',
-        }
-        // selector: '',
-        // keybind: '',
-        // insertion: '',
-        // font: '',
+        clickEvent: { action: 'run_command', value: '', },
+        hoverEvent: { action: 'show_text', value: '', },
+        score: { objective: '', name: '*', },
+        nbt: { type: 'block', value: '', path: '', interpret: false, separator: '', },
+        translate: { translate: '', with: '', }
     }
 }
 
-interface JsonTile {
+export interface JsonTile {
     id: string
     time: string
     data: SerializedEditorState
+    nodeKeys: NodeKey[]
     text: string
 }
 
@@ -67,45 +46,47 @@ export const defaultTplMap: Record<string, string> = {
 
 
 interface IState {
-    eventList: JSONEventObject[]
+    // eventList: JSONEventObject[]
     jsonList: JsonTile[]
     jsonIndex: number
     currentJson: JsonTile | null
-    nodeMap: Record<string, NodeKey>
     width: number
     bgColor: string
     tplMap: Record<string, string>
     tplType: string
+    trigger: string
 }
 
 const defaultState: IState = {
-    eventList: [],
+    // eventList: [],
     jsonList: [],
     jsonIndex: -1,
     currentJson: null,
-    nodeMap: {},
     width: 100,
     bgColor: '#fff',
     tplMap: defaultTplMap,
     tplType: 'tellraw',
+    trigger: '',
 }
 
 type Action =
-    | { type: 'CreateEvent', id: string }
-    | { type: 'UpdateEvent', eventListItem: JSONEventObject }
-    | { type: 'AddEvent', eventListItem: JSONEventObject }
-    | { type: 'RemoveEvent', id: string }
-    | { type: 'CloneEvent', id: string, cloneId: string }
+    // | { type: 'CreateEvent', id: string }
+    // | { type: 'UpdateEvent', eventListItem: JSONEventObject }
+    // | { type: 'AddEvent', eventListItem: JSONEventObject }
+    // | { type: 'RemoveEvent', id: string }
+    // | { type: 'CloneEvent', id: string, cloneId: string }
 
     | { type: 'UpdateCurrentJson', currentJson: JsonTile | null }
+    | { type: 'AddNodeKey', nodeKey: NodeKey }
 
     | { type: 'AddJson', json: JsonTile }
     | { type: 'UpdateJson', json: JsonTile }
     | { type: 'UpdateJsonIndex', index: number }
     | { type: 'RemoveJsonByIndex', index: number }
     | { type: 'MoveJsonItem', index: number, offset: number }
+    
+    | { type: 'UpdateTrigger' }
 
-    | { type: 'UpdateNodeMap', nodeMap: Record<string, NodeKey> }
     | { type: 'UpdateWidth', width: number }
     | { type: 'UpdateBgColor', bgColor: string }
 
@@ -131,48 +112,6 @@ function reducer(state: IState, action: Action) {
             return defaultState
         case 'Load':
             return action.state
-        case 'CreateEvent':
-            return partialUpdate({
-                eventList: [...state.eventList, createJSONEventObject(action.id)]
-            })
-        case 'AddEvent':
-            return partialUpdate({
-                eventList: [...state.eventList, action.eventListItem]
-            })
-        case 'UpdateEvent':
-            return partialUpdate(({ eventList }) => {
-                const newEventList = [...eventList]
-                const id = action.eventListItem.id
-                const index = newEventList.findIndex(item => item.id === id)
-                if (index > -1) {
-                    newEventList[index] = action.eventListItem
-                    return {
-                        eventList: newEventList
-                    }
-                }
-            })
-        case 'CloneEvent':
-            return partialUpdate(({ eventList }) => {
-                const newEventList = [...eventList]
-                const { id, cloneId } = action
-                const cloneOne = newEventList.find(item => item.id === cloneId)!
-                newEventList.push({
-                    ...clone(cloneOne),
-                    id,
-                })
-                return {
-                    eventList: newEventList
-                }
-            })
-        case 'RemoveEvent':
-            return partialUpdate(({ eventList: comments }) => {
-                const id = action.id
-                const index = comments.findIndex(item => item.id === id)
-                comments.splice(index, 1)
-                return {
-                    eventList: [...comments]
-                }
-            })
         case 'UpdateCurrentJson':
             return partialUpdate({
                 currentJson: action.currentJson
@@ -195,6 +134,24 @@ function reducer(state: IState, action: Action) {
             return partialUpdate({
                 jsonIndex: action.index
             })
+        case 'UpdateTrigger':
+            return partialUpdate({
+                trigger: createUID()
+            })
+        case 'AddNodeKey':
+            return partialUpdate(({ currentJson }) => {
+                if (currentJson) {
+                    return {
+                        currentJson: {
+                            ...currentJson,
+                            nodeKeys: [
+                                ...currentJson.nodeKeys,
+                                action.nodeKey
+                            ]
+                        }
+                    }
+                }
+            })
         case 'RemoveJsonByIndex':
             return partialUpdate(({ jsonList }) => {
                 const newJsonList = [...jsonList]
@@ -210,10 +167,6 @@ function reducer(state: IState, action: Action) {
                 return {
                     jsonList: newJsonList
                 }
-            })
-        case 'UpdateNodeMap':
-            return partialUpdate({
-                nodeMap: action.nodeMap
             })
         case 'UpdateWidth':
             return partialUpdate({

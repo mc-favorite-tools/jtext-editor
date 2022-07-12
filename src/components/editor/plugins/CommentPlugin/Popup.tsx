@@ -1,12 +1,13 @@
 import { createDOMRange, createRectsFromDOMRange } from "@lexical/selection";
 import { Row, Col, Input, Radio, Select, Tooltip, Button, Divider, Checkbox } from "antd";
 import { NodeKey, LexicalEditor, $getSelection, $isRangeSelection, $getNodeByKey } from "lexical";
-import { useRef, useCallback, useEffect, useContext, useMemo } from "react";
+import { useRef, useCallback, useEffect, useContext, useMemo, useState } from "react";
 import styled from "styled-components";
+import { cacheEventMap } from ".";
 import { KeybindList } from "../../../../core/tellraw/keybind";
 import { NbtType, ClickActionType, HoverTokenType } from "../../../../core/tellraw/model";
 import { AppContext, JSONEventObject } from "../../../../store";
-import { partialUpdate } from "../../../../utils";
+import { createUID, partialUpdate } from "../../../../utils";
 
 function TypeComponent(props: {
     value: JSONEventObject
@@ -262,9 +263,34 @@ export function Popup(props: {
     const boxRef = useRef<HTMLDivElement>(null)
     const [state, dispatch] = useContext(AppContext)
 
-    const comment = useMemo(() => {
-        return state.eventList.find(item => item.id === props.id)
-    }, [state.eventList, props.id])
+    const activeJson = useMemo(
+        () => {
+            if (state.jsonIndex > -1) {
+                return state.jsonList[state.jsonIndex]
+            }
+            return state.currentJson
+        },
+        [state.currentJson, state.jsonIndex, state.jsonList]
+    )
+
+    const eventList = useMemo(
+        () => {
+            if (activeJson) {
+                return activeJson.nodeKeys.map(nodeKey => {
+                    return cacheEventMap.get(nodeKey)!
+                })
+            }
+            return []
+        },
+        [activeJson, state.trigger]
+    )
+    
+    const eventListItem = useMemo(
+        () => {
+            return eventList.find(item => item.id === props.id)
+        },
+        [eventList, props.id]
+    )
 
     const updatePosition = useCallback(() => {
         props.editor.getEditorState().read(() => {
@@ -303,28 +329,35 @@ export function Popup(props: {
         }
     }, [props.editor, updatePosition])
 
-    useEffect(() => {
-        updatePosition()
-    }, [props.id, props.editor, updatePosition])
+    useEffect(
+        () => {
+            updatePosition()
+        },
+        [props.id, props.editor, updatePosition]
+    )
 
-    if (! comment) {
+    if (! eventListItem) {
         return null
     }
 
-    const update = useCallback((state: Partial<JSONEventObject>) => {
-        dispatch({
-            type: 'UpdateEvent',
-            eventListItem: partialUpdate(comment, state)
-        })
-    }, [comment])
+    const update = useCallback(
+        (partialState: Partial<JSONEventObject>) => {
+            const newEventListItem = partialUpdate(eventListItem, partialState)
+            cacheEventMap.set(eventListItem.id, newEventListItem)
+            dispatch({
+                type: 'UpdateTrigger'
+            })
+        },
+        [eventListItem]
+    )
 
     const hoverPlacehoder = useMemo(() => {
         return {
             show_text: '选填，合法的json会被解析成组件',
             show_item: '选填，{ id, count, tag }',
             show_entity: '选填，{ name, tyoe, id }',
-        }[comment.hoverEvent.action]
-    }, [comment.hoverEvent.action])
+        }[eventListItem.hoverEvent.action]
+    }, [eventListItem.hoverEvent.action])
 
     return (
         <WrapperPanel ref={boxRef}>
@@ -332,7 +365,7 @@ export function Popup(props: {
                 <Col span={4} style={{ textAlign: "right", paddingTop: 4 }}>类型：</Col>
                 <Col span={20}>
                     <>
-                        <Radio.Group defaultValue='text' value={comment.type} onChange={(e) => {
+                        <Radio.Group defaultValue='text' value={eventListItem.type} onChange={(e) => {
                             const type = e.target.value
                             update({
                                 type
@@ -347,7 +380,7 @@ export function Popup(props: {
                         </Radio.Group>
                         <TypeComponent onChange={(partial) => {
                             update(partial)
-                        }} value={comment} />
+                        }} value={eventListItem} />
                     </>
                 </Col>
             </Row>
@@ -359,11 +392,11 @@ export function Popup(props: {
                             <Select onChange={(action: ClickActionType) => {
                                 update({
                                     clickEvent: {
-                                        ...comment.clickEvent,
+                                        ...eventListItem.clickEvent,
                                         action,
                                     }
                                 })
-                            }} value={comment.clickEvent.action} defaultValue='run_command' style={{ width: 100 }}>
+                            }} value={eventListItem.clickEvent.action} defaultValue='run_command' style={{ width: 100 }}>
                                 <Select.Option value='run_command'>执行指令</Select.Option>
                                 <Select.Option value='open_url'>打开网址</Select.Option>
                                 <Select.Option value='suggest_command'>输入文本</Select.Option>
@@ -373,12 +406,12 @@ export function Popup(props: {
                         }
                         placeholder='选填'
                         allowClear
-                        value={comment.clickEvent.value}
+                        value={eventListItem.clickEvent.value}
                         onChange={(e) => {
                             const value = e.target.value
                             update({
                                 clickEvent: {
-                                    ...comment.clickEvent,
+                                    ...eventListItem.clickEvent,
                                     value,
                                 }
                             })
@@ -393,11 +426,11 @@ export function Popup(props: {
                             <Select onChange={(action: HoverTokenType) => {
                                 update({
                                     hoverEvent: {
-                                        ...comment.hoverEvent,
+                                        ...eventListItem.hoverEvent,
                                         action,
                                     }
                                 })
-                            }} value={comment.hoverEvent.action} defaultValue='show_text' style={{ width: 100 }}>
+                            }} value={eventListItem.hoverEvent.action} defaultValue='show_text' style={{ width: 100 }}>
                                 <Select.Option value='show_text'>text</Select.Option>
                                 <Select.Option value='show_item'>item</Select.Option>
                                 <Select.Option value='show_entity'>entity</Select.Option>
@@ -405,12 +438,12 @@ export function Popup(props: {
                         }
                         placeholder={hoverPlacehoder}
                         allowClear
-                        value={comment.hoverEvent.value}
+                        value={eventListItem.hoverEvent.value}
                         onChange={(e) => {
                             const value = e.target.value
                             update({
                                 hoverEvent: {
-                                    ...comment.hoverEvent,
+                                    ...eventListItem.hoverEvent,
                                     value,
                                 }
                             })
@@ -423,7 +456,7 @@ export function Popup(props: {
                 <Col span={20}>
                     <Input placeholder='选填，shift点击文字填充到聊天栏'
                         allowClear
-                        value={comment.insertion}
+                        value={eventListItem.insertion}
                         onChange={(e) => {
                             const insertion = e.target.value
                             update({
@@ -437,7 +470,7 @@ export function Popup(props: {
                 <Col span={20}>
                     <Input placeholder='选填'
                         allowClear
-                        value={comment.font}
+                        value={eventListItem.font}
                         onChange={(e) => {
                             const font = e.target.value
                             update({
