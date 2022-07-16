@@ -577,7 +577,7 @@ export default function ToolbarPlugin(props: {
                     props.setVisible(true)
                 }} />
                 {/* <FontSizeOutlined title='切换字体' className='text-btn-item' onClick={() => {
-                    
+                   
                 }} /> */}
                 {/* <Upload style={{ fontSize: 20 }} maxCount={1}
                     accept={'image/png, image/jpeg, image/jpg'}

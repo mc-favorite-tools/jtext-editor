@@ -8,6 +8,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'r
 import { createThread, Thread } from './model';
 import { Popup } from './Popup';
 import { JSONEventObject, AppContext, createJSONEventObject } from '../../../../store'
+import { clone } from '../../../../utils';
 
 
 export const INSERT_INLINE_COMMAND: LexicalCommand<void> = createCommand()
@@ -162,23 +163,20 @@ export default function CommentPlugin() {
                         for (const [key, mutation] of mutations) {
                             const node: null | MarkNode = $getNodeByKey(key)
                             if ($isMarkNode(node)) {
-                                if (mutation === 'created') {
+                                if (mutation === 'updated') {
+                                    cloneId = node.getIDs()[0]
+                                } else if (mutation === 'created') {
                                     if (cloneId) {
                                         const thread = createThread()
-                                        cacheEventMap.set(cloneId, cacheEventMap.get(thread.id)!)
-                                        // dispatch({
-                                        //     type: 'CloneEvent',
-                                        //     id: thread.id,
-                                        //     cloneId,
-                                        // })
+                                        const newEvent = clone(cacheEventMap.get(cloneId)!)
+                                        newEvent.id = thread.id
+                                        cacheEventMap.set(thread.id, newEvent)
                                         editor.update(() => {
                                             nodeKeyMap.set(thread.id, key)
                                             node.deleteID(node.getIDs()[0])
                                             node.addID(thread.id)
                                         })
                                     }
-                                } else if (mutation === 'updated') {
-                                    cloneId = node.getIDs()[0]
                                 }
                             }
                         }
@@ -237,7 +235,7 @@ export default function CommentPlugin() {
                                 selection.anchor.offset,
                             )
 
-                            if (ids !== null) {
+                            if (ids !== null && selection.anchor.offset !== 0) {
                                 setActiveID(ids[0])
                                 hasActiveIds = true
                             }

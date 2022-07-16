@@ -7,7 +7,7 @@ import { cacheEventMap } from ".";
 import { KeybindList } from "../../../../core/tellraw/keybind";
 import { NbtType, ClickActionType, HoverTokenType } from "../../../../core/tellraw/model";
 import { AppContext, JSONEventObject } from "../../../../store";
-import { createUID, partialUpdate } from "../../../../utils";
+import { bindEvent, createUID, partialUpdate } from "../../../../utils";
 
 function TypeComponent(props: {
     value: JSONEventObject
@@ -263,26 +263,16 @@ export function Popup(props: {
     const boxRef = useRef<HTMLDivElement>(null)
     const [state, dispatch] = useContext(AppContext)
 
-    const activeJson = useMemo(
-        () => {
-            if (state.jsonIndex > -1) {
-                return state.jsonList[state.jsonIndex]
-            }
-            return state.currentJson
-        },
-        [state.currentJson, state.jsonIndex, state.jsonList]
-    )
-
     const eventList = useMemo(
         () => {
-            if (activeJson) {
-                return activeJson.nodeKeys.map(nodeKey => {
+            if (state.currentJson) {
+                return state.currentJson.nodeKeys.map(nodeKey => {
                     return cacheEventMap.get(nodeKey)!
                 })
             }
             return []
         },
-        [activeJson, state.trigger]
+        [state.currentJson, state.trigger]
     )
     
     const eventListItem = useMemo(
@@ -322,17 +312,11 @@ export function Popup(props: {
     }, [props.id, props.editor])
 
     useEffect(() => {
-        window.addEventListener('resize', updatePosition)
-
-        return () => {
-            window.removeEventListener('resize', updatePosition)
-        }
+        return bindEvent('resize', updatePosition)
     }, [props.editor, updatePosition])
 
     useEffect(
-        () => {
-            updatePosition()
-        },
+        () => updatePosition(),
         [props.id, props.editor, updatePosition]
     )
 
