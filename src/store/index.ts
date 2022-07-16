@@ -39,14 +39,13 @@ export interface JsonTile {
 
 export const defaultTplMap: Record<string, string> = {
     tellraw: '/tellraw @p ["",%s]',
+    title: '/title @p title ["",%s]',
     sign: '/give @p oak_sign{BlockEntityTag:{%s}}',
     book: '/give @p written_book{pages:[%s],title:"",author:"made by JText Editor"}',
-    title: '/title @p title ["",%s]',
 }
 
 
 interface IState {
-    // eventList: JSONEventObject[]
     jsonList: JsonTile[]
     jsonIndex: number
     currentJson: JsonTile | null
@@ -58,7 +57,6 @@ interface IState {
 }
 
 const defaultState: IState = {
-    // eventList: [],
     jsonList: [],
     jsonIndex: -1,
     currentJson: null,
@@ -70,11 +68,6 @@ const defaultState: IState = {
 }
 
 type Action =
-    // | { type: 'CreateEvent', id: string }
-    // | { type: 'UpdateEvent', eventListItem: JSONEventObject }
-    // | { type: 'AddEvent', eventListItem: JSONEventObject }
-    // | { type: 'RemoveEvent', id: string }
-    // | { type: 'CloneEvent', id: string, cloneId: string }
 
     | { type: 'UpdateCurrentJson', currentJson: JsonTile | null }
     | { type: 'AddNodeKey', nodeKey: NodeKey }

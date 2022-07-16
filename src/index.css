@@ -27,7 +27,13 @@ body {
     font-weight: normal;
 }
 
-@font-face {
+/* @font-face {
+    font-family: "Minecraft";
+    src: url("./font/Minecraft-Regular.ttf");
+    font-weight: normal;
+} */
+
+/* @font-face {
     font-family: "Minecraft";
     src: url("./font/Minecraft-Italic.otf");
     font-style: italic;
@@ -44,9 +50,10 @@ body {
     src: url("./font/Minecraft-BoldItalic.otf");
     font-weight: Bold;
     font-style: italic;
-}
+} */
 
 @font-face {
     font-family: "Minecraft-AE";
     src: url("./font/Minecraft-AE.ttf");
+    letter-spacing: 10px;
 }

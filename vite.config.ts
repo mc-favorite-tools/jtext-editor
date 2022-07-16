@@ -48,6 +48,11 @@ export default defineConfig({
                     name: 'idbKeyval',
                     var: 'idbKeyval',
                     path: 'https://unpkg.com/idb-keyval@6.2.0/dist/umd.js',
+                },
+                {
+                    name: 'dayjs',
+                    var: 'dayjs',
+                    path: 'https://unpkg.com/dayjs@1.11.3/dayjs.min.js',
                 }
             ]
         }),

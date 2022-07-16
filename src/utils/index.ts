@@ -9,7 +9,7 @@ export function escape(raw: string) {
 }
 
 export function unescape(raw: string) {
-    return raw.replace(/\\\\/g, '\\').replace(/"/g, '"')
+    return raw.replace(/\\\\/g, '\\').replace(/\\"/g, '"')
 }
 
 export function copy(text: string) {
@@ -49,4 +49,14 @@ export function toObject<K extends string | number | symbol, V>(map: Map<K, V>):
         obj[k] = v
     })
     return obj
+}
+
+export function bindEvent<K extends keyof WindowEventMap>(type: K, fn: (ev: WindowEventMap[K]) => any) {
+    window.addEventListener(type, fn)
+    return () => window.removeEventListener(type, fn)
+}
+
+export function mergeEvent(...handles: Array<() => Function>) {
+    const removeEvents = handles.map(handle => handle())
+    return () => removeEvents.forEach(handle => handle())
 }

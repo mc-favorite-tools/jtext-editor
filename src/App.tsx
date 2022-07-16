@@ -3,7 +3,7 @@ import styled from "styled-components"
 import { Editor } from "./components/editor"
 import { cacheEventMap, nodeKeyMap } from "./components/editor/plugins/CommentPlugin"
 import { AppContext, useAppReducer } from "./store"
-import { toObject } from "./utils"
+import { bindEvent, toObject } from "./utils"
 import * as idbKeyval from 'idb-keyval'
 
 const H1 = styled.h1`
@@ -51,16 +51,12 @@ function App() {
 
     // 卸载前保存数据
     useEffect(() => {
-        function handle(e: any) {
+        return bindEvent('beforeunload', (e: any) => {
             idbKeyval.set('__jte__', state),
             idbKeyval.set('__jte_nodeKeyMap__', toObject(nodeKeyMap)),
             idbKeyval.set('__jte_cacheEventMap__', toObject(cacheEventMap))
             e.returnValue = 'delay'
-        }
-        window.addEventListener('beforeunload', handle)
-        return () => {
-            window.removeEventListener('beforeunload', handle)
-        }
+        })
     }, [state])
 
     return (

@@ -6,18 +6,20 @@ import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from '@lexical/selection';
-import { BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined, QuestionCircleOutlined, BgColorsOutlined, FunctionOutlined, UserOutlined, CopyOutlined, UploadOutlined, ClearOutlined, UndoOutlined, RedoOutlined, SaveOutlined, PlusOutlined, FontSizeOutlined, SettingOutlined, ReloadOutlined } from '@ant-design/icons';
+import { BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined, QuestionCircleOutlined, BgColorsOutlined, FunctionOutlined, UserOutlined, CopyOutlined, UploadOutlined, ClearOutlined, UndoOutlined, RedoOutlined, SaveOutlined, PlusOutlined, FontSizeOutlined, SettingOutlined, ReloadOutlined, LineOutlined } from '@ant-design/icons';
 import clsx from 'clsx';
 import { $getNearestBlockElementAncestorOrThrow, mergeRegister } from '@lexical/utils';
 import ColorPicker from '../../color-picker';
 import { cacheEventMap, INSERT_INLINE_COMMAND, nodeKeyMap } from './CommentPlugin';
-import { AppContext } from '../../../store';
-import { copy, createTime, createUID } from '../../../utils';
+import { AppContext, defaultTplMap } from '../../../store';
+import { bindEvent, copy, createTime, createUID, escape } from '../../../utils';
 import { $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
-import { Dropdown, Menu, message, Modal } from 'antd';
+import { Dropdown, Input, Menu, message, Modal, Select } from 'antd';
 import { toStringify, transform } from '../../../core/tellraw';
 import useOnce from '../../../hooks/useOnce';
 import * as idbKeyval from 'idb-keyval'
+import { $isHorizontalRuleNode, INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontalRuleNode';
+import create from '@ant-design/icons/lib/components/IconFont';
 
 const Wrapper = styled.div`
     margin-bottom: 8px;
@@ -53,7 +55,10 @@ const Wrapper = styled.div`
     }
 `
 
-export default function ToolbarPlugin() {
+export default function ToolbarPlugin(props: {
+    visible: boolean
+    setVisible: React.Dispatch<React.SetStateAction<boolean>>
+}) {
     const [editor] = useLexicalComposerContext()
     const [activeEditor, setActiveEditor] = useState(editor)
     const [isBold, setIsBold] = useState(false)
@@ -82,6 +87,15 @@ export default function ToolbarPlugin() {
         }
 
     }, [activeEditor])
+
+    useEffect(() => {
+        return bindEvent('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'p' && !props.visible) {
+                e.preventDefault()
+                props.setVisible(true)
+            }
+        })
+    })
 
     useEffect(() => {
         return mergeRegister(
@@ -166,9 +180,9 @@ export default function ToolbarPlugin() {
                     if (localState.currentJson) {
                         json = localState.currentJson.data
                     }
-                    if (localState.jsonIndex > -1) {
-                        json = localState.jsonList[localState.jsonIndex].data
-                    }
+                    // if (localState.jsonIndex > -1) {
+                    //     json = localState.jsonList[localState.jsonIndex].data
+                    // }
                     if (json) {
                         const editorState = editor.parseEditorState(json)
                         editor.setEditorState(editorState)
@@ -210,26 +224,33 @@ export default function ToolbarPlugin() {
         editorState.read(() => {
             const data = editorState.toJSON()
             const nodeKeys: NodeKey[] = []
-            const nodes = $getRoot().getChildren().map(item => (item as ParagraphNode).getChildren()).flat()
+            const nodes = $getRoot().getChildren().filter(item => $isParagraphNode(item)).map(item => item.getChildren()).flat()
             nodes.forEach(node => {
                 if ($isMarkNode(node)) {
                     nodeKeys.push(node.getIDs()[0])
                 }
             })
-            
+
             // 保存到临时变量中
             dispatch({
                 type: 'UpdateCurrentJson',
                 currentJson: (
-                    state.jsonIndex === -1 && text
-                        ? {
-                            id: createUID(),
-                            data,
-                            text,
-                            nodeKeys,
-                            time: createTime(),
-                        }
-                        : null
+                    {
+                        id: createUID(),
+                        data,
+                        text,
+                        nodeKeys,
+                        time: createTime(),
+                    }
+                    // state.jsonIndex === -1 && text
+                    //     ? {
+                    //         id: createUID(),
+                    //         data,
+                    //         text,
+                    //         nodeKeys,
+                    //         time: createTime(),
+                    //     }
+                    //     : null
                 ),
             })
         })
@@ -242,7 +263,7 @@ export default function ToolbarPlugin() {
             if (state.jsonIndex !== -1) {
                 const json = state.jsonList[state.jsonIndex]
                 const nodeKeys: NodeKey[] = []
-                const nodes = $getRoot().getChildren().map(item => (item as ParagraphNode).getChildren()).flat()
+                const nodes = $getRoot().getChildren().filter(item => $isParagraphNode(item)).map(item => item.getChildren()).flat()
                 nodes.forEach(node => {
                     if ($isMarkNode(node)) {
                         nodeKeys.push(node.getIDs()[0])
@@ -267,53 +288,79 @@ export default function ToolbarPlugin() {
 
     const add = useCallback(() => {
         const editorState = editor.getEditorState()
-        
-        // cache
-        // state.eventList.forEach(item => {
-        //     cacheEventMap.set(item.id, item)
-        // })
 
-        editor.update(() => {
+        editorState.read(() => {
             const data = editorState.toJSON()
 
             const nodeKeys: NodeKey[] = []
-            const nodes = $getRoot().getChildren().map(item => (item as ParagraphNode).getChildren()).flat()
+            const nodes = $getRoot().getChildren().filter(item => $isParagraphNode(item)).map(item => item.getChildren()).flat()
             nodes.forEach(node => {
                 if ($isMarkNode(node)) {
                     nodeKeys.push(node.getIDs()[0])
                 }
             })
 
-            if (state.jsonIndex !== -1) {
-                const json = state.jsonList[state.jsonIndex]
-                dispatch({
-                    type: 'UpdateJson',
-                    json: {
-                        ...json,
-                        data,
-                        nodeKeys,
-                        time: createTime(),
-                    },
-                })
-            } else {
-                dispatch({
-                    type: 'AddJson',
-                    json: {
-                        id: createUID(),
-                        data,
-                        text,
-                        nodeKeys,
-                        time: createTime(),
-                    }
-                })
-            }
-    
-            dispatch({
-                type: 'UpdateJsonIndex',
-                index: -1,
+            const promise = new Promise((resolve, reject) => {
+                if (text.trim().length) {
+                    Modal.warning({
+                        okCancel: true,
+                        closable: true,
+                        content: '是否保存当前工程？',
+                        onOk() {
+                            resolve(true)
+                        },
+                        onCancel(...args) {
+                            if (args.length === 0) {
+                                resolve(false)
+                            } else {
+                                reject()
+                            }
+                        },
+                        okText: '保存并新建',
+                        cancelText: '直接新建',
+                    })
+                } else {
+                    resolve(false)
+                }
             })
+            
+            promise.then((isSave) => {
+                if (isSave) {
+                    if (state.jsonIndex !== -1) {
+                        const json = state.jsonList[state.jsonIndex]
+                        dispatch({
+                            type: 'UpdateJson',
+                            json: {
+                                ...json,
+                                data,
+                                nodeKeys,
+                                time: createTime(),
+                            },
+                        })
+                    } else {
+                        dispatch({
+                            type: 'AddJson',
+                            json: {
+                                id: createUID(),
+                                data,
+                                text,
+                                nodeKeys,
+                                time: createTime(),
+                            }
+                        })
+                    }
+                }
+                
+                dispatch({
+                    type: 'UpdateJsonIndex',
+                    index: -1,
+                })
 
-            $getRoot().clear()
+                editor.update(() => {
+                    $getRoot().clear()
+                })
+            })
+            
         })
         
     }, [editor, state.jsonIndex, state.jsonList, text])
@@ -339,6 +386,99 @@ export default function ToolbarPlugin() {
         },
         [activeJson, state.trigger]
     )
+
+    const create = (type: string) => {
+        activeEditor.update(() => {
+            let selection = $getSelection()
+            if ($isRangeSelection(selection)) {
+                let offset = 1
+
+                if (selection.isBackward()) {
+                    const focus = selection.focus;
+                    const anchor = selection.anchor;
+                    const newSelection = $createRangeSelection()
+                    newSelection.anchor.set(focus.key, focus.offset, anchor.type)
+                    newSelection.focus.set(anchor.key, anchor.offset, anchor.type)
+                    $setSelection(newSelection)
+                    selection = newSelection
+                }
+
+                const nodes = selection.extract()
+                const result: SerializedLexicalNode[][] = []
+                let tmpSerializedNode: SerializedLexicalNode[] = []
+
+                let isFirstParagraphNode = true
+
+                for (let i = 0; i < nodes.length; i+=offset) {
+                    const node = nodes[i];
+                    if ($isTextNode(node)) {
+                        tmpSerializedNode.push(node.exportJSON())
+                        offset = 1
+                        continue
+                    }
+                    if ($isMarkNode(node)) {
+                        const children = node.getChildren()
+                        const serializedMarkNode = node.exportJSON()
+                        serializedMarkNode.children = children.map(node => node.exportJSON())
+                        tmpSerializedNode.push(serializedMarkNode)
+                        
+                        offset = children.length + 1
+                        continue
+                    }
+                    if ($isParagraphNode(node)) {
+                        if (isFirstParagraphNode) {
+                            isFirstParagraphNode = false
+                            continue
+                        }
+                        if (/tellraw|nbt|title|book/.test(type)) {
+                            const node = tmpSerializedNode[tmpSerializedNode.length - 1]  as any
+                            if (node) {
+                                if (node.type === 'text') {
+                                    node.text += '\n'
+                                } else if (node.type === 'mark') {
+                                    node.children[node.children.length - 1].text += '\n'
+                                }
+                            }
+                        } else {
+                            result.push(tmpSerializedNode)
+                            tmpSerializedNode = []
+                        }
+                    }
+                    if (type === 'book' && $isHorizontalRuleNode(node)) {
+                        result.push(tmpSerializedNode)
+                        tmpSerializedNode = []
+                    }
+                }
+                result.push(tmpSerializedNode)
+
+                let str = ''
+                if (type === 'tellraw') {
+                    const text = toStringify(transform(result[0], eventList))
+                    str = state.tplMap.tellraw.replace('%s', text)
+                } else if (type === 'title') {
+                    const text = toStringify(transform(result[0], eventList))
+                    str = state.tplMap.title.replace('%s', text)
+                } else if (type === 'sign') {
+                    if (result.length > 4) {
+                        message.warning('sign 最多支持四行文本！')
+                        return
+                    }
+                    const text = result.map((item, index) => `Text${index + 1}:'[${toStringify(transform(item, eventList))}]'`).join(',')
+                    str = state.tplMap.sign.replace('%s', text)
+                } else if (type === 'book') {
+                    const text = result.map(item => {
+                        const props = transform(item, eventList)
+                        return `'[${toStringify(props, true).replace(/\\"/g, '"')}]'`
+                    }).join(',')
+                    str = state.tplMap.book.replace('%s', text)
+                } else {
+                    str = '["",' + toStringify(transform(result[0], eventList)) + ']'
+                }
+                copy(str)
+                message.success('已复制到剪贴版')
+            }
+        })
+    }
 
     return (
         <Wrapper>
@@ -376,6 +516,13 @@ export default function ToolbarPlugin() {
                 <FunctionOutlined title='添加功能' className={clsx('text-btn-item', { disabled: hasSelectedMarkNode })} onClick={() => {
                     editor.dispatchCommand(INSERT_INLINE_COMMAND, null)
                 }} />
+                <LineOutlined title='分隔符' className='text-btn-item' onClick={() => {
+                    activeEditor.dispatchCommand(
+                        INSERT_HORIZONTAL_RULE_COMMAND,
+                        undefined,
+                    );
+                }} />
+
                 <em></em>
 
                 <PlusOutlined title='新建' className={clsx('text-btn-item', { disabled: !text })} onClick={() => {
@@ -389,85 +536,13 @@ export default function ToolbarPlugin() {
                     }
                 }}/>
                 <Dropdown disabled={!isSelected} overlay={<Menu onClick={(e) => {
-                    activeEditor.update(() => {
-                        let selection = $getSelection()
-                        if ($isRangeSelection(selection)) {
-                            let offset = 1
-
-                            if (selection.isBackward()) {
-                                const focus = selection.focus;
-                                const anchor = selection.anchor;
-                                const newSelection = $createRangeSelection()
-                                newSelection.anchor.set(focus.key, focus.offset, anchor.type)
-                                newSelection.focus.set(anchor.key, anchor.offset, anchor.type)
-                                $setSelection(newSelection)
-                                selection = newSelection
-                            }
-
-                            const nodes = selection.extract()
-                            const result: SerializedLexicalNode[][] = []
-                            let tmpSerializedNode: SerializedLexicalNode[] = []
-
-                            let isFirstParagraphNode = true
-
-                            for (let i = 0; i < nodes.length; i+=offset) {
-                                const node = nodes[i];
-                                if ($isTextNode(node)) {
-                                    tmpSerializedNode.push(node.exportJSON())
-                                    offset = 1
-                                    continue
-                                }
-                                if ($isMarkNode(node)) {
-                                    const children = node.getChildren()
-                                    const serializedMarkNode = node.exportJSON()
-                                    serializedMarkNode.children = children.map(node => node.exportJSON())
-                                    tmpSerializedNode.push(serializedMarkNode)
-                                    
-                                    offset = children.length + 1
-                                    continue
-                                }
-                                if ($isParagraphNode(node)) {
-                                    if (isFirstParagraphNode) {
-                                        isFirstParagraphNode = false
-                                        continue
-                                    }
-                                    if (e.key === 'tellraw' || e.key === 'nbt') {
-                                        const node = tmpSerializedNode[tmpSerializedNode.length - 1]  as any
-                                        if (node.type === 'text') {
-                                            node.text += '\n'
-                                        } else if (node.type === 'mark') {
-                                            node.children[node.children.length - 1].text += '\n'
-                                        }
-                                    } else {
-                                        result.push(tmpSerializedNode)
-                                        tmpSerializedNode = []
-                                    }
-                                }
-                            }
-                            result.push(tmpSerializedNode)
-
-                            let str = ''
-                            if (e.key === 'tellraw') {
-                                const text = toStringify(transform(result[0], eventList))
-                                str = state.tplMap.tellraw.replace('%s', text)
-                            } else if (e.key === 'sign') {
-                                if (result.length > 4) {
-                                    message.warning('sign 最多支持四行文本！')
-                                    return
-                                }
-                                const text = result.map((item, index) => `Text${index + 1}:'[${toStringify(transform(item, eventList))}]'`).join(',')
-                                str = state.tplMap.sign.replace('%s', text)
-                            } else {
-                                str = '["",' + toStringify(transform(result[0], eventList)) + ']'
-                            }
-                            copy(str)
-                            message.success('已复制到剪贴版')
-                        }
-                    })
+                    create(e.key)
                 }} items={[
                     { label: '仅nbt', key: 'nbt', },
-                    { label: 'sign', key: 'sign', },
                     { label: 'tellraw', key: 'tellraw', },
+                    { label: 'title', key: 'title', },
+                    { label: 'sign', key: 'sign', },
+                    { label: 'book', key: 'book', },
                 ]}/>}>
                     <CopyOutlined title='对选取内生成nbt' className={clsx('text-btn-item', { disabled: !isSelected })} />
                 </Dropdown>
@@ -498,6 +573,9 @@ export default function ToolbarPlugin() {
                         cancelText: '取消'
                     })
                 }}/>
+                <SettingOutlined title='管理(ctrl+p)' className='text-btn-item' onClick={() => {
+                    props.setVisible(true)
+                }} />
                 {/* <FontSizeOutlined title='切换字体' className='text-btn-item' onClick={() => {
                     
                 }} /> */}

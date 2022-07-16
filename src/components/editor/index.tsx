@@ -11,9 +11,11 @@ import { MarkNode } from '@lexical/mark';
 import JsonTablePlugin from './plugins/JsonTablePlugin';
 import ObfuscatedPlugin from './plugins/ObfuscatedPlugin';
 import { Slider } from 'antd';
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { AppContext } from '../../store';
 import { $getRoot } from 'lexical';
+import HorizontalRulePlugin from './plugins/HorizontalRulePlugin';
+import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode';
 
 const Wrapper = styled.div`
     max-width: 900px;
@@ -38,12 +40,14 @@ function onChange(editorState: any) {
 
 export function Editor() {
     const [state, dispatch] = useContext(AppContext)
+    const [visible, setVisible] = useState(false)
 
     const initialConfig = {
         namespace: 'JTextEditor',
         theme,
         nodes: [
             MarkNode,
+            HorizontalRuleNode,
         ],
         onError: (err: any) => console.error(err),
     }
@@ -52,14 +56,14 @@ export function Editor() {
         <Wrapper>
             <LexicalComposer initialConfig={initialConfig}>
                 {/* top component */}
-                <ToolbarPlugin />
+                <ToolbarPlugin visible={visible} setVisible={setVisible} />
 
                 <RichTextPlugin
                     contentEditable={<ContentEditable className='jtp__editor'
                         style={{
                             width: state.width + '%',
                             outline: 'none',
-                            minHeight: '250px',
+                            minHeight: 450,
                             border: '1px solid #eee',
                             backgroundColor: state.bgColor,
                         }} />}
@@ -69,20 +73,21 @@ export function Editor() {
                 <CommentPlugin />
                 <HistoryPlugin />
                 <ObfuscatedPlugin />
+                <HorizontalRulePlugin />
 
                 {/* bottom component */}
                 <Slider step={1} min={0} max={100} value={state.width}
-                    marks={{
-                        33: 'sign',
-                        42: 'book',
-                    }}
+                    // marks={{
+                    //     33: 'sign',
+                    //     42: 'book',
+                    // }}
                     onChange={(width) => {
                         dispatch({
                             type: 'UpdateWidth',
                             width,
                         })
                     }}/>
-                <JsonTablePlugin />
+                <JsonTablePlugin visible={visible} setVisible={setVisible} />
             </LexicalComposer>
         </Wrapper>
     );
