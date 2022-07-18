@@ -1,4 +1,3 @@
-import './index.css';
 import { $getRoot, LexicalCommand, NodeKey, } from 'lexical';
 import { $createMarkNode, $getMarkIDs, $isMarkNode, $unwrapMarkNode, $wrapSelectionInMarkNode, MarkNode, } from '@lexical/mark';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
