@@ -25,7 +25,7 @@ function pickColor(text: string) {
     return ''
 }
 
-interface JSONTextProps {
+export interface JSONTextProps {
     text: string
     bold?: boolean
     italic?: boolean
@@ -35,7 +35,7 @@ interface JSONTextProps {
     color?: string,
 }
 
-interface JSONEventProps {
+export interface JSONEventProps {
     clickEvent?: ClickToken
     hoverEvent?: HoverToken
     nbt?: string
@@ -56,7 +56,7 @@ interface JSONEventProps {
     }
 }
 
-type JSONProps = Spread<JSONTextProps, JSONEventProps>
+export type JSONProps = Spread<JSONTextProps, JSONEventProps>
 
 function getStyle(node: SerializedTextNode): JSONTextProps {
     const bold = !!(node.format & IS_BOLD)

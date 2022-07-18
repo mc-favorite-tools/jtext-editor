@@ -1,12 +1,12 @@
 import { $createRangeSelection, $getRoot, $getSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_LOW, createCommand, FORMAT_TEXT_COMMAND,  LexicalCommand, NodeKey, ParagraphNode, REDO_COMMAND, SELECTION_CHANGE_COMMAND, SerializedLexicalNode, TextNode, UNDO_COMMAND } from 'lexical';
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from '@lexical/selection';
-import { BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined, QuestionCircleOutlined, BgColorsOutlined, FunctionOutlined, UserOutlined, CopyOutlined, UploadOutlined, ClearOutlined, UndoOutlined, RedoOutlined, SaveOutlined, PlusOutlined, FontSizeOutlined, SettingOutlined, ReloadOutlined, LineOutlined } from '@ant-design/icons';
+import { BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined, QuestionCircleOutlined, BgColorsOutlined, FunctionOutlined, UserOutlined, CopyOutlined, UploadOutlined, ClearOutlined, UndoOutlined, RedoOutlined, SaveOutlined, PlusOutlined, FontSizeOutlined, SettingOutlined, ReloadOutlined, LineOutlined, ImportOutlined } from '@ant-design/icons';
 import clsx from 'clsx';
 import { $getNearestBlockElementAncestorOrThrow, mergeRegister } from '@lexical/utils';
 import ColorPicker from '../../color-picker';
@@ -14,12 +14,12 @@ import { cacheEventMap, INSERT_INLINE_COMMAND, nodeKeyMap } from './CommentPlugi
 import { AppContext, defaultTplMap } from '../../../store';
 import { bindEvent, copy, createTime, createUID, escape } from '../../../utils';
 import { $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
-import { Dropdown, Input, Menu, message, Modal, Select } from 'antd';
+import { Dropdown, Input, InputRef, Menu, message, Modal, Select } from 'antd';
 import { toStringify, transform } from '../../../core/tellraw';
 import useOnce from '../../../hooks/useOnce';
 import * as idbKeyval from 'idb-keyval'
 import { $isHorizontalRuleNode, INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontalRuleNode';
-import create from '@ant-design/icons/lib/components/IconFont';
+import { deserialized, parseJText } from '../../../core/tellraw/parse';
 
 const Wrapper = styled.div`
     margin-bottom: 8px;
@@ -71,8 +71,9 @@ export default function ToolbarPlugin(props: {
     const [state, dispatch] = useContext(AppContext)
     const [fontColor, setFontColor] = useState('#000')
     const [text, setText] = useState('')
-    const [hasSelectedMarkNode, setHasSelectedMarkNode] = useState(false)
+    const [hasSelectedMarkOrParagraphNode, setHasSelectedMarkOrParagraphNode] = useState(false)
     const [isSelected, setIsSelected] = useState(false)
+    const importTextRef = useRef<InputRef>(null)
     
     const updateToolbar = useCallback(() => {
         const selection = $getSelection()
@@ -136,9 +137,9 @@ export default function ToolbarPlugin(props: {
 
                         const nodes = selection.getNodes()
                         const has = nodes.length === 1
-                            ? nodes[0].getType() === 'mark' || nodes[0].getParent()?.getType() === 'mark'
-                            : nodes.some(node => node.getType() === 'mark')
-                        setHasSelectedMarkNode(has)
+                            ? nodes[0].getType() === 'mark' || $isMarkNode(nodes[0].getParent())
+                            : nodes.some(node => $isMarkNode(node) || $isParagraphNode(node))
+                        setHasSelectedMarkOrParagraphNode(has)
                     }
                 })
             })
@@ -180,9 +181,6 @@ export default function ToolbarPlugin(props: {
                     if (localState.currentJson) {
                         json = localState.currentJson.data
                     }
-                    // if (localState.jsonIndex > -1) {
-                    //     json = localState.jsonList[localState.jsonIndex].data
-                    // }
                     if (json) {
                         const editorState = editor.parseEditorState(json)
                         editor.setEditorState(editorState)
@@ -206,10 +204,6 @@ export default function ToolbarPlugin(props: {
                         const id = node.getIDs()[0]
                         nodeKeyMap.delete(id)
                         cacheEventMap.delete(id)
-                        // dispatch({
-                        //     type: 'RemoveEvent',
-                        //     id,
-                        // })
                         $unwrapMarkNode(node)
                     }
                 })
@@ -242,15 +236,6 @@ export default function ToolbarPlugin(props: {
                         nodeKeys,
                         time: createTime(),
                     }
-                    // state.jsonIndex === -1 && text
-                    //     ? {
-                    //         id: createUID(),
-                    //         data,
-                    //         text,
-                    //         nodeKeys,
-                    //         time: createTime(),
-                    //     }
-                    //     : null
                 ),
             })
         })
@@ -281,12 +266,12 @@ export default function ToolbarPlugin(props: {
                     },
                 })
             } else {
-                add()
+                add(true)
             }
         })
     }, [editor, state.jsonIndex, state.jsonList, text])
 
-    const add = useCallback(() => {
+    const add = useCallback((noinfo = false) => {
         const editorState = editor.getEditorState()
 
         editorState.read(() => {
@@ -301,24 +286,28 @@ export default function ToolbarPlugin(props: {
             })
 
             const promise = new Promise((resolve, reject) => {
-                if (text.trim().length) {
-                    Modal.warning({
-                        okCancel: true,
-                        closable: true,
-                        content: '是否保存当前工程？',
-                        onOk() {
-                            resolve(true)
-                        },
-                        onCancel(...args) {
-                            if (args.length === 0) {
-                                resolve(false)
-                            } else {
-                                reject()
-                            }
-                        },
-                        okText: '保存并新建',
-                        cancelText: '直接新建',
-                    })
+                if (text.length) {
+                    if (noinfo) {
+                        resolve(true)
+                    } else {
+                        Modal.warning({
+                            okCancel: true,
+                            closable: true,
+                            content: '是否保存当前工程？',
+                            onOk() {
+                                resolve(true)
+                            },
+                            onCancel(...args) {
+                                if (args.length === 0) {
+                                    resolve(false)
+                                } else {
+                                    reject()
+                                }
+                            },
+                            okText: '保存并新建',
+                            cancelText: '直接新建',
+                        })
+                    }
                 } else {
                     resolve(false)
                 }
@@ -513,7 +502,7 @@ export default function ToolbarPlugin(props: {
                     <BgColorsOutlined title='修改颜色' className='text-btn-item' />
                 </ColorPicker>
                 <ClearOutlined title='清除格式' className='text-btn-item' onClick={clearFormatting}/>
-                <FunctionOutlined title='添加功能' className={clsx('text-btn-item', { disabled: hasSelectedMarkNode })} onClick={() => {
+                <FunctionOutlined title='添加功能' className={clsx('text-btn-item', { disabled: hasSelectedMarkOrParagraphNode })} onClick={() => {
                     editor.dispatchCommand(INSERT_INLINE_COMMAND, null)
                 }} />
                 <LineOutlined title='分隔符' className='text-btn-item' onClick={() => {
@@ -573,6 +562,49 @@ export default function ToolbarPlugin(props: {
                         cancelText: '取消'
                     })
                 }}/>
+                <ImportOutlined title='导入命令' className='text-btn-item' onClick={() => {
+                    Modal.info({
+                        title: '导入nbt命令',
+                        content: (
+                            <Input ref={importTextRef} placeholder='必填，仅nbt' autoFocus allowClear />
+                        ),
+                        closable: true,
+                        onOk() {
+                            const rawtext = importTextRef.current!.input!.value.trim()
+                            if (! rawtext.length) {
+                                message.warning('请输入要导入的文本！')
+                                return true
+                            }
+                            // console.log(mojangParser(rawtext))
+                            // return
+                            parseJText(rawtext)
+                                .then((tokens) => {
+                                    editor.update(() => {
+                                        const { nodes, eventList, nodeMap } = deserialized(tokens)
+                                        const root = $getRoot()
+                                        if (text) {
+
+                                        } else {
+                                            root.clear()
+                                            nodeMap.forEach(id => {
+                                                nodeKeyMap.set(id, nodeMap.get(id)!)
+                                            })
+                                            nodes.forEach(node => {
+                                                root.append(node)
+                                            })
+                                            eventList.forEach(item => {
+                                                cacheEventMap.set(item.id, item)
+                                            })
+                                        }
+                                    })
+                                }).catch(() => {
+                                    message.warning('导入文本格式有误！')
+                                    return true
+                                })
+                        },
+                        okText: '确定'
+                    })
+                }} />
                 <SettingOutlined title='管理(ctrl+p)' className='text-btn-item' onClick={() => {
                     props.setVisible(true)
                 }} />

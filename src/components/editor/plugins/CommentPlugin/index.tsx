@@ -67,7 +67,7 @@ export default function CommentPlugin() {
     //     }
     // }, [])
 
-    const add = useCallback((commentOrThread: JSONEventObject | Thread) => {
+    const add = useCallback((thread: JSONEventObject | Thread) => {
             editor.update(() => {
                 const selection = $getSelection()
 
@@ -85,7 +85,7 @@ export default function CommentPlugin() {
 
                     const focus = selection.focus;
                     const anchor = selection.anchor;
-                    const id = commentOrThread.id;
+                    const id = thread.id;
                     const isBackward = selection.isBackward()
 
                     $wrapSelectionInMarkNode(selection, isBackward, id)
