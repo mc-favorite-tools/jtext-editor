@@ -13,9 +13,15 @@ interface JsonToken {
     eventProps: JSONEventProps
 }
 
-function parseExtra(rawtext: string) {
+function parseExtra(rawtext: string = '[]') {
     const obj = JSON.parse(rawtext)
     const result: JSONProps[] = []
+
+    if (Array.isArray(obj)) {
+        result.push(...obj)
+        return result
+    }
+
     const { extra, ...restProps } = obj
 
     const keys = Object.keys(restProps)
@@ -29,8 +35,14 @@ function parseExtra(rawtext: string) {
 }
 
 function addLR(props: JSONProps[]) {
-    const last = props[props.length - 1]
-    last.text += '\n'
+    if (!! props.length) {
+        const last = props[props.length - 1]
+        last.text += '\\n'
+    } else {
+        props.push({
+            text: '\\n'
+        })
+    }
 }
 
 function createJsonToken(props: JSONProps | string): {
@@ -76,6 +88,7 @@ export function parseJText(rawnbt: string) {
         } catch {
             try {
                 const obj = mojangParser(rawnbt)
+
                 // book
                 const pages = (obj?.pages || obj?.Item?.tag?.pages) as string[]
                 if (pages) {
@@ -244,6 +257,7 @@ export function deserialized(tokenList: JsonToken[][]): {
         paragraph = $createParagraphNode()
     })
 
+    debugger
     nodes.pop()
 
     return {

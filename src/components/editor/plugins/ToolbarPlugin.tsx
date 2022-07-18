@@ -13,7 +13,7 @@ import ColorPicker from '../../color-picker';
 import { cacheEventMap, INSERT_INLINE_COMMAND, nodeKeyMap } from './CommentPlugin';
 import { AppContext, defaultTplMap } from '../../../store';
 import { bindEvent, copy, createTime, createUID, escape } from '../../../utils';
-import { $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
+import { $createMarkNode, $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
 import { Dropdown, Input, InputRef, Menu, message, Modal, Select } from 'antd';
 import { toStringify, transform } from '../../../core/tellraw';
 import useOnce from '../../../hooks/useOnce';
@@ -393,14 +393,45 @@ export default function ToolbarPlugin(props: {
                 }
 
                 const nodes = selection.extract()
-                console.log(nodes)
                 const result: SerializedLexicalNode[][] = []
                 let tmpSerializedNode: SerializedLexicalNode[] = []
 
                 let isFirstParagraphNode = true
+                console.log(nodes)
+
+                // 处理边缘情况
+                const textNodes: TextNode[] = []
+                for (let i = 0; i < nodes.length; i++) {
+                    const node = nodes[i]
+                    if ($isMarkNode(node)) {
+                        const childrenKeys = node.getChildrenKeys()
+                        if (textNodes.length === node.getChildrenSize() && textNodes.every(textNode => childrenKeys.includes(textNode.getKey()))) {
+                            nodes.unshift(...nodes.splice(i, 1))
+                        }
+                        textNodes.length = 0
+                        break
+                    }
+                    textNodes.push(node as TextNode)
+                }
+
+                // for (let i = nodes.length - 1; i >= 0; i--) {
+                //     const node = nodes[i]
+                //     if ($isMarkNode(node)) {
+                //         const childrenKeys = node.getChildrenKeys()
+                //         if (textNodes.length !== childrenKeys.length) {
+                //             const newMarkNode = $createMarkNode(node.getIDs())
+                //             newMarkNode.append(...textNodes)
+                //             nodes[i] = newMarkNode
+                //         }
+                //         textNodes.length = 0
+                //         break
+                //     }
+                //     textNodes.push(node as TextNode)
+                // }
 
                 for (let i = 0; i < nodes.length; i+=offset) {
-                    const node = nodes[i];
+                    const node = nodes[i]
+
                     if ($isTextNode(node)) {
                         tmpSerializedNode.push(node.exportJSON())
                         offset = 1
@@ -454,7 +485,7 @@ export default function ToolbarPlugin(props: {
                         message.warning('sign 最多支持四行文本！')
                         return
                     }
-                    const text = result.map((item, index) => `Text${index + 1}:'[${toStringify(transform(item, eventList))}]'`).join(',')
+                    const text = result.map((item, index) => `Text${index + 1}:'["",${toStringify(transform(item, eventList))}]'`).join(',')
                     str = state.tplMap.sign.replace('%s', text)
                 } else if (type === 'book') {
                     const text = result.map(item => {
@@ -467,6 +498,7 @@ export default function ToolbarPlugin(props: {
                 }
                 copy(str)
                 message.success('已复制到剪贴版')
+                                
             }
         })
     }
