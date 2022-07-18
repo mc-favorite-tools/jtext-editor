@@ -6,6 +6,7 @@ import { createJSONEventObject, JSONEventObject } from "../../store"
 import { equalObject, isEmptyObject } from "../../utils"
 import mojangParser from "../mojang-parser"
 import { unescape } from '../../utils'
+import PresetColor from "./color"
 
 interface JsonToken {
     textProps: JSONTextProps
@@ -45,9 +46,14 @@ function createJsonToken(props: JSONProps | string): {
         }
     }
     const { text, color, bold, italic, obfuscated, strikethrough, ...eventProps } = props
+
+    const colorItem = PresetColor.find(item => item.id === color)
+
     return {
         textProps: {
-            color, bold, italic, obfuscated, strikethrough, text: unescape(text)
+            bold, italic, obfuscated, strikethrough,
+            color: colorItem ? colorItem.fc : color,
+            text: unescape(text)
         },
         eventProps,
     }

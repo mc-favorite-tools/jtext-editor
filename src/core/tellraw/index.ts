@@ -13,7 +13,7 @@ const IS_UNDERLINE = 1 << 3
 const IS_OBFUSCATED = 1 << 5
 
 function pickColor(text: string) {
-    const match = text.match(/color:\s(.*);?\b/)
+    const match = text.match(/color:\s*(.*);?\b/)
     if (match) {
         const [, color] = match
         const colorItem = PresetColor.find(item => item.fc === color)

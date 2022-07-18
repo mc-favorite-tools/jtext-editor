@@ -393,6 +393,7 @@ export default function ToolbarPlugin(props: {
                 }
 
                 const nodes = selection.extract()
+                console.log(nodes)
                 const result: SerializedLexicalNode[][] = []
                 let tmpSerializedNode: SerializedLexicalNode[] = []
 

@@ -245,6 +245,12 @@ const WrapperPanel = styled.div`
         transform: rotate(135deg);
         box-shadow: -3px 3px 3px #0000000d;
     }
+    &.top::before {
+        bottom: -13px;
+        top: initial;
+        left: calc(50% - .25em);
+        transform: rotate(-45deg);
+    }
    
     @keyframes enter {
         0% {
@@ -304,8 +310,14 @@ export function Popup(props: {
                     if (correctedLeft < 10) {
                         correctedLeft = 10;
                     }
+                    if (bottom + 20 + boxElem.offsetHeight > innerHeight) {
+                        boxElem.classList.add('top')
+                        boxElem.style.top = `${bottom - 30 - boxElem.offsetHeight}px`
+                    } else {
+                        boxElem.style.top = `${bottom + 20}px`
+                        boxElem.classList.remove('top')
+                    }
                     boxElem.style.left = `${correctedLeft}px`
-                    boxElem.style.top = `${bottom + 20}px`
                 }
             }
         })
