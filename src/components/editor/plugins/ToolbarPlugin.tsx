@@ -415,12 +415,13 @@ export default function ToolbarPlugin(props: {
                         continue
                     }
                     if ($isParagraphNode(node)) {
+                        offset = 1
                         if (isFirstParagraphNode) {
                             isFirstParagraphNode = false
                             continue
                         }
                         if (/tellraw|nbt|title|book/.test(type)) {
-                            const node = tmpSerializedNode[tmpSerializedNode.length - 1]  as any
+                            const node = tmpSerializedNode[tmpSerializedNode.length - 1] as any
                             if (node) {
                                 if (node.type === 'text') {
                                     node.text += '\n'
@@ -457,7 +458,7 @@ export default function ToolbarPlugin(props: {
                 } else if (type === 'book') {
                     const text = result.map(item => {
                         const props = transform(item, eventList)
-                        return `'[${toStringify(props, true).replace(/\\"/g, '"')}]'`
+                        return `'[${toStringify(props, true).replace(/\\"/g, '"').replace(/\\n/g, '\\\\n')}]'`
                     }).join(',')
                     str = state.tplMap.book.replace('%s', text)
                 } else {
@@ -550,6 +551,8 @@ export default function ToolbarPlugin(props: {
                             idbKeyval.del('__jte__')
                             idbKeyval.del('__jte_cacheEventMap__')
                             idbKeyval.del('__jte_nodeKeyMap__')
+                            nodeKeyMap.clear()
+                            cacheEventMap.clear()
                             dispatch({
                                 type: 'Reset',
                             })
@@ -575,27 +578,21 @@ export default function ToolbarPlugin(props: {
                                 message.warning('请输入要导入的文本！')
                                 return true
                             }
-                            // console.log(mojangParser(rawtext))
-                            // return
                             parseJText(rawtext)
                                 .then((tokens) => {
                                     editor.update(() => {
                                         const { nodes, eventList, nodeMap } = deserialized(tokens)
                                         const root = $getRoot()
-                                        if (text) {
-
-                                        } else {
-                                            root.clear()
-                                            nodeMap.forEach(id => {
-                                                nodeKeyMap.set(id, nodeMap.get(id)!)
-                                            })
-                                            nodes.forEach(node => {
-                                                root.append(node)
-                                            })
-                                            eventList.forEach(item => {
-                                                cacheEventMap.set(item.id, item)
-                                            })
-                                        }
+                                        root.clear()
+                                        nodeMap.forEach((value, id) => {
+                                            nodeKeyMap.set(id, value)
+                                        })
+                                        nodes.forEach(node => {
+                                            root.append(node)
+                                        })
+                                        eventList.forEach(item => {
+                                            cacheEventMap.set(item.id, item)
+                                        })
                                     })
                                 }).catch(() => {
                                     message.warning('导入文本格式有误！')

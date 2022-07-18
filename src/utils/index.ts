@@ -66,14 +66,17 @@ export function equalObject(a: any, b: any): boolean {
     if (a === null || b === null) return false
     let aProps = Object.getOwnPropertyNames(a)
     let bProps = Object.getOwnPropertyNames(b)
-    if (aProps.length !== bProps.length) return false
 
-    return aProps.some(k => {
-        if (typeof a[k] === 'object') {
-            return equalObject(a[k], b[k])
-        }
-        return a[k] === b[k]
-    })
+    if (aProps.length === bProps.length) {
+        return aProps.every(k => {
+            if (typeof a[k] === 'object') {
+                return equalObject(a[k], b[k])
+            }
+            return a[k] === b[k]
+        })
+    }
+
+    return false
 }
 
 export function isEmptyObject(obj: any) {

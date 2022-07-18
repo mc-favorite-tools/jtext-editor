@@ -23,7 +23,6 @@ export class NbtNode extends TextNode {
     }
 
     updateDOM(prevNode: TextNode, dom: HTMLElement, config: EditorConfig): boolean {
-        console.log('updateDOM', prevNode, dom)
         return false
     }
 

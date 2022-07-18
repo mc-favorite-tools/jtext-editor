@@ -199,17 +199,6 @@ export default function CommentPlugin() {
                                 if (mutation === 'destroyed') {
                                     if (markNodeKey !== undefined) {
                                         nodeKeyMap.delete(id)
-                                        // const nodeMap = { ...state.nodeMap }
-                                        // delete nodeMap[id]
-
-                                        // cacheEventMap.delete(id)
-
-                                        // cacheEventMap.set(id, state.eventList.find(item => item.id === id)!)
-                                        
-                                        // dispatch({
-                                        //     type: 'RemoveEvent',
-                                        //     id,
-                                        // })
                                     }
                                 } else {
                                     nodeKeyMap.set(id, key)

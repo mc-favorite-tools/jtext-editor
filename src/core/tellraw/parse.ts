@@ -16,7 +16,11 @@ function parseExtra(rawtext: string) {
     const obj = JSON.parse(rawtext)
     const result: JSONProps[] = []
     const { extra, ...restProps } = obj
-    result.push(restProps)
+
+    const keys = Object.keys(restProps)
+    if (!(keys.length === 0 || keys.length === 1 && keys[0] === 'text')) {
+        result.push(restProps)
+    }
     if (extra) {
         result.push(...extra)
     }
@@ -28,11 +32,22 @@ function addLR(props: JSONProps[]) {
     last.text += '\n'
 }
 
-function createJsonToken(props: JSONProps) {
+function createJsonToken(props: JSONProps | string): {
+    textProps: JSONTextProps
+    eventProps: JSONEventProps
+} {
+    if (typeof props === 'string') {
+        return {
+            textProps: {
+                text: unescape(props)
+            },
+            eventProps: {},
+        }
+    }
     const { text, color, bold, italic, obfuscated, strikethrough, ...eventProps } = props
     return {
         textProps: {
-            text, color, bold, italic, obfuscated, strikethrough
+            color, bold, italic, obfuscated, strikethrough, text: unescape(text)
         },
         eventProps,
     }
@@ -58,12 +73,11 @@ export function parseJText(rawnbt: string) {
                 // book
                 const pages = (obj?.pages || obj?.Item?.tag?.pages) as string[]
                 if (pages) {
-                    const tokens = pages.map(page => {
-                        const arr = JSON.parse(page.replace(/\\"/g, '\\\\"')) as JSONProps[]
-                        return arr.map(item => createJsonToken({
-                            ...item,
-                            text: unescape(item.text)
-                        }))
+                    const tokens = pages.map((page) => {
+                        const arr = page.startsWith('{')
+                            ? parseExtra(page)
+                            : (JSON.parse(page.replace(/\\"/g, '\\\\"')) as JSONProps[])
+                        return arr.map(item => createJsonToken(item))
                     })
                     resolve(tokens)
                     return
@@ -85,10 +99,7 @@ export function parseJText(rawnbt: string) {
                     addLR(text4)
 
                     const allText = [...text1, ...text2, ...text3, ...text4]
-                    const tokens = allText.map(item => createJsonToken({
-                        ...item,
-                        text: unescape(item.text)
-                    }))
+                    const tokens = allText.map(item => createJsonToken(item))
                     resolve([tokens])
                 }
             } catch (error) {
@@ -198,7 +209,7 @@ export function deserialized(tokenList: JsonToken[][]): {
             prevEventProps = eventProps
             
             // 处理text节点
-            const textArr = textProps.text ? textProps.text.split('\n') : ['xx']
+            const textArr = textProps.text ? textProps.text.split('\\n') : [`〔〕`]
             const [textNode, ...restList] = textArr.map((text: string) => {
                 return deserializedTextNode({
                     ...textProps,
@@ -218,7 +229,6 @@ export function deserialized(tokenList: JsonToken[][]): {
                 prevEventProps = null
                 paragraph = $createParagraphNode()
                 if (node.getTextContentSize()) {
-                    console.log(1)
                     paragraph.append(node)
                 }
             })
