@@ -12,7 +12,7 @@ import { $getNearestBlockElementAncestorOrThrow, mergeRegister } from '@lexical/
 import ColorPicker from '../../color-picker';
 import { cacheEventMap, INSERT_INLINE_COMMAND, nodeKeyMap } from './CommentPlugin';
 import { AppContext, defaultTplMap } from '../../../store';
-import { bindEvent, copy, createTime, createUID, escape } from '../../../utils';
+import { bindEvent, copy, createTime, createUID, escape, inlineEscape } from '../../../utils';
 import { $createMarkNode, $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
 import { Dropdown, Input, InputRef, Menu, message, Modal, Select } from 'antd';
 import { toStringify, transform } from '../../../core/tellraw';
@@ -397,7 +397,6 @@ export default function ToolbarPlugin(props: {
                 let tmpSerializedNode: SerializedLexicalNode[] = []
 
                 let isFirstParagraphNode = true
-                console.log(nodes)
 
                 // 处理边缘情况
                 const textNodes: TextNode[] = []
@@ -485,16 +484,16 @@ export default function ToolbarPlugin(props: {
                         message.warning('sign 最多支持四行文本！')
                         return
                     }
-                    const text = result.map((item, index) => `Text${index + 1}:'["",${toStringify(transform(item, eventList))}]'`).join(',')
+                    const text = result.map((item, index) => `Text${index + 1}:'${inlineEscape(toStringify(transform(item, eventList)))}'`).join(',')
                     str = state.tplMap.sign.replace('%s', text)
                 } else if (type === 'book') {
                     const text = result.map(item => {
                         const props = transform(item, eventList)
-                        return `'[${toStringify(props, true).replace(/\\"/g, '"').replace(/\\n/g, '\\\\n')}]'`
+                        return "'" + inlineEscape(toStringify(props)) + "'"
                     }).join(',')
                     str = state.tplMap.book.replace('%s', text)
                 } else {
-                    str = '["",' + toStringify(transform(result[0], eventList)) + ']'
+                    str = toStringify(transform(result[0], eventList))
                 }
                 copy(str)
                 message.success('已复制到剪贴版')

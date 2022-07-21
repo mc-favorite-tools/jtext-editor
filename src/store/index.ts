@@ -38,8 +38,8 @@ export interface JsonTile {
 }
 
 export const defaultTplMap: Record<string, string> = {
-    tellraw: '/tellraw @p ["",%s]',
-    title: '/title @p title ["",%s]',
+    tellraw: '/tellraw @p %s',
+    title: '/title @p title %s',
     sign: '/give @p oak_sign{BlockEntityTag:{%s}}',
     book: '/give @p written_book{pages:[%s],title:"",author:"made by JText Editor"}',
 }

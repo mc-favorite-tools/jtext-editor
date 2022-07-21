@@ -82,3 +82,10 @@ export function equalObject(a: any, b: any): boolean {
 export function isEmptyObject(obj: any) {
     return !!obj && !Object.keys(obj).length
 }
+
+export function inlineEscape(rawtext: string) {
+    return rawtext.replace(/(\\.)/g, '\\$1').replace(/(')/g, '\\$1')
+}
+export function inlineUnescape(rawtext: string) {
+    return rawtext.replace(/(\\\\.)/g, (_, $1) => $1.slice(1)).replace(/(\\')/g,  (_, $1) => $1.slice(1))
+}
