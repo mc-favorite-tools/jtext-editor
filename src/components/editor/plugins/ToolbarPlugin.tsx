@@ -22,8 +22,10 @@ import { $isHorizontalRuleNode, INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/
 import { deserialized, parseJText } from '../../../core/tellraw/parse';
 
 const Wrapper = styled.div`
+    position: sticky;
+    top: 0;
     margin-bottom: 8px;
-
+    background: #fff;
     .text-btn {
         display: inline-block;
         font-size: 20px;
@@ -199,6 +201,13 @@ export default function ToolbarPlugin(props: {
                         node.setFormat(0)
                         node.setStyle('')
                         $getNearestBlockElementAncestorOrThrow(node).setFormat('')
+                    }
+                    const parentNode = node.getParent()
+                    if ($isMarkNode(parentNode)) {
+                        const id = parentNode.getIDs()[0]
+                        nodeKeyMap.delete(id)
+                        cacheEventMap.delete(id)
+                        $unwrapMarkNode(parentNode)
                     }
                     if ($isMarkNode(node)) {
                         const id = node.getIDs()[0]
@@ -399,6 +408,15 @@ export default function ToolbarPlugin(props: {
                 let isFirstParagraphNode = true
 
                 // 处理边缘情况
+                // 1
+                const firstNode = nodes[0]
+                if ($isTextNode(firstNode)) {
+                    const parentNode = firstNode.getParent()
+                    if ($isMarkNode(parentNode)) {
+                        nodes.unshift(parentNode)
+                    }
+                }
+                // 2
                 const textNodes: TextNode[] = []
                 for (let i = 0; i < nodes.length; i++) {
                     const node = nodes[i]
@@ -536,7 +554,7 @@ export default function ToolbarPlugin(props: {
                 </ColorPicker>
                 <ClearOutlined title='清除格式' className='text-btn-item' onClick={clearFormatting}/>
                 <FunctionOutlined title='添加功能' className={clsx('text-btn-item', { disabled: hasSelectedMarkOrParagraphNode })} onClick={() => {
-                    editor.dispatchCommand(INSERT_INLINE_COMMAND, null)
+                    editor.dispatchCommand(INSERT_INLINE_COMMAND, undefined)
                 }} />
                 <LineOutlined title='分隔符' className='text-btn-item' onClick={() => {
                     activeEditor.dispatchCommand(

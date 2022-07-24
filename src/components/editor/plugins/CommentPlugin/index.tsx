@@ -1,4 +1,4 @@
-import { $getRoot, LexicalCommand, NodeKey, } from 'lexical';
+import { $getRoot, COMMAND_PRIORITY_CRITICAL, LexicalCommand, NodeKey, REDO_COMMAND, UNDO_COMMAND, } from 'lexical';
 import { $createMarkNode, $getMarkIDs, $isMarkNode, $unwrapMarkNode, $wrapSelectionInMarkNode, MarkNode, } from '@lexical/mark';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { mergeRegister, registerNestedElementResolver } from '@lexical/utils';
@@ -19,6 +19,7 @@ export default function CommentPlugin() {
     const [activeID, setActiveID] = useState<string | null>(null)
     const [activeAnchorKey, setActiveAnchorKey] = useState<NodeKey | null>(null)
     const [state, dispatch] = useContext(AppContext)
+    const [canShowPopup, setCanShowPopup] = useState(true)
 
     // const remove = useCallback(
     //     (comment: JSONEventObject, thread?: any) => {
@@ -102,6 +103,7 @@ export default function CommentPlugin() {
 
     useEffect(() => {
         // 选择激活的markNode
+        setCanShowPopup(true)
         const changedElems: HTMLElement[] = [];
         if (activeID) {
             const key = nodeKeyMap.get(activeID)
@@ -263,11 +265,35 @@ export default function CommentPlugin() {
             ),
         )
     }, [editor])
+    
+    useEffect(
+        () => {
+            return mergeRegister(
+                editor.registerCommand(
+                    UNDO_COMMAND,
+                    (payload) => {
+                        setCanShowPopup(false)
+                        return false
+                    },
+                    COMMAND_PRIORITY_CRITICAL
+                ),
+                editor.registerCommand(
+                    REDO_COMMAND,
+                    (payload) => {
+                        setCanShowPopup(false)
+                        return false
+                    },
+                    COMMAND_PRIORITY_CRITICAL
+                ),
+            )
+        },
+        [editor]
+    )
 
     return (
         <>
             {
-                !!activeID && !!activeAnchorKey && (
+                canShowPopup && !!activeID && !!activeAnchorKey && (
                     <Popup id={activeID} editor={editor} />
                 )
             }
