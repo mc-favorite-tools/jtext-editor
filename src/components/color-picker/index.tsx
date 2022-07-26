@@ -41,6 +41,7 @@ export default function ColorPicker(props: ColorPickerProps): JSX.Element {
         if (/^#[0-9A-Fa-f]{6}$/i.test(hex)) {
             const newColor = transformColor('hex', hex);
             setSelfColor(newColor);
+            props.onChange?.(newColor.hex);
         }
     };
 
@@ -53,6 +54,7 @@ export default function ColorPicker(props: ColorPickerProps): JSX.Element {
         const newColor = transformColor('hsv', newHsv);
         setSelfColor(newColor);
         setInputColor(newColor.hex);
+        props.onChange?.(newColor.hex);
     };
 
     const onMoveHue = ({ x }: Position) => {
@@ -61,16 +63,8 @@ export default function ColorPicker(props: ColorPickerProps): JSX.Element {
 
         setSelfColor(newColor);
         setInputColor(newColor.hex);
+        props.onChange?.(newColor.hex);
     };
-
-    useEffect(() => {
-        if (visible && props.onChange) {
-            if (selfColor.hex !== '#000000') {
-                props.onChange(selfColor.hex);
-                setInputColor(selfColor.hex);
-            }
-        }
-    }, [selfColor, props.onChange, visible]);
 
     useEffect(() => {
         if (props.color === undefined) return;
@@ -101,7 +95,9 @@ export default function ColorPicker(props: ColorPickerProps): JSX.Element {
                         style={{ backgroundColor: basicColor }}
                         onClick={() => {
                             setInputColor(basicColor);
-                            setSelfColor(transformColor('hex', basicColor));
+                            const newColor = transformColor('hex', basicColor)
+                            setSelfColor(newColor);
+                            props.onChange?.(newColor.hex);
                         }}
                     />
                 ))}
