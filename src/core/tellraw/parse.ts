@@ -3,9 +3,8 @@ import { $createHorizontalRuleNode, HorizontalRuleNode } from "@lexical/react/Le
 import { $createParagraphNode, $createTextNode, $isParagraphNode, LexicalNode, NodeKey, ParagraphNode } from "lexical"
 import { JSONEventProps, JSONProps, JSONTextProps } from "."
 import { createJSONEventObject, JSONEventObject } from "../../store"
-import { equalObject, isEmptyObject } from "../../utils"
+import { equalObject, inlineUnescape, isEmptyObject, isObject } from "../../utils"
 import mojangParser from "../mojang-parser"
-import { unescape } from '../../utils'
 import PresetColor from "./color"
 
 interface JsonToken {
@@ -13,9 +12,20 @@ interface JsonToken {
     eventProps: JSONEventProps
 }
 
-function parseExtra(rawtext: string) {
-    const obj = JSON.parse(rawtext)
+function parseExtra(rawtext: string = '[]') {
+    const obj = JSON.parse(inlineUnescape(rawtext))
     const result: JSONProps[] = []
+
+    if (Array.isArray(obj)) {
+        result.push(...obj.filter(Boolean).map(item => {
+            if (typeof item === 'string') {
+                return { text: item }
+            }
+            return item
+        }))
+        return result
+    }
+
     const { extra, ...restProps } = obj
 
     const keys = Object.keys(restProps)
@@ -29,8 +39,14 @@ function parseExtra(rawtext: string) {
 }
 
 function addLR(props: JSONProps[]) {
-    const last = props[props.length - 1]
-    last.text += '\n'
+    if (!! props.length) {
+        const last = props[props.length - 1]
+        last.text += '\\n'
+    } else {
+        props.push({
+            text: '\\n'
+        })
+    }
 }
 
 function createJsonToken(props: JSONProps | string): {
@@ -40,20 +56,19 @@ function createJsonToken(props: JSONProps | string): {
     if (typeof props === 'string') {
         return {
             textProps: {
-                text: unescape(props)
+                text: props
             },
             eventProps: {},
         }
     }
-    const { text, color, bold, italic, obfuscated, strikethrough, ...eventProps } = props
+    const { text, color, bold, italic, obfuscated, strikethrough, underlined, ...eventProps } = props
 
     const colorItem = PresetColor.find(item => item.id === color)
 
     return {
         textProps: {
-            bold, italic, obfuscated, strikethrough,
+            text, bold, italic, obfuscated, strikethrough,
             color: colorItem ? colorItem.fc : color,
-            text: unescape(text)
         },
         eventProps,
     }
@@ -62,28 +77,33 @@ function createJsonToken(props: JSONProps | string): {
 export function parseJText(rawnbt: string) {
     return new Promise<JsonToken[][]>((resolve, reject) => {
         try {
-            const arr = JSON.parse(rawnbt) as JSONProps[]
-            if (! Array.isArray(arr)) {
+            let arr = JSON.parse(rawnbt) as JSONProps[] | JSONProps
+            if (! isObject(arr)) {
                 reject()
                 return
             }
 
+            if (! Array.isArray(arr)) {
+                arr = [arr]
+            }
+
             const tokens = arr.filter(Boolean).map(item => createJsonToken({
                 ...item,
-                text: unescape(item.text)
+                text: item.text
             }))
             resolve([tokens])
         } catch {
             try {
                 const obj = mojangParser(rawnbt)
+
                 // book
                 const pages = (obj?.pages || obj?.Item?.tag?.pages) as string[]
                 if (pages) {
                     const tokens = pages.map((page) => {
                         const arr = page.startsWith('{')
                             ? parseExtra(page)
-                            : (JSON.parse(page.replace(/\\"/g, '\\\\"')) as JSONProps[])
-                        return arr.map(item => createJsonToken(item))
+                            : (JSON.parse(inlineUnescape(page)) as JSONProps[])
+                        return arr.filter(Boolean).map(item => createJsonToken(item))
                     })
                     resolve(tokens)
                     return
@@ -215,7 +235,7 @@ export function deserialized(tokenList: JsonToken[][]): {
             prevEventProps = eventProps
             
             // 处理text节点
-            const textArr = textProps.text ? textProps.text.split('\\n') : [`〔〕`]
+            const textArr = textProps.text ? textProps.text.split('\n') : [`〔〕`]
             const [textNode, ...restList] = textArr.map((text: string) => {
                 return deserializedTextNode({
                     ...textProps,

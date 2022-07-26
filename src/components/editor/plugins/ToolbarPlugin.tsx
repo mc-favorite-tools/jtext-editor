@@ -12,8 +12,8 @@ import { $getNearestBlockElementAncestorOrThrow, mergeRegister } from '@lexical/
 import ColorPicker from '../../color-picker';
 import { cacheEventMap, INSERT_INLINE_COMMAND, nodeKeyMap } from './CommentPlugin';
 import { AppContext, defaultTplMap } from '../../../store';
-import { bindEvent, copy, createTime, createUID, escape } from '../../../utils';
-import { $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
+import { bindEvent, copy, createTime, createUID, escape, inlineEscape } from '../../../utils';
+import { $createMarkNode, $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
 import { Dropdown, Input, InputRef, Menu, message, Modal, Select } from 'antd';
 import { toStringify, transform } from '../../../core/tellraw';
 import useOnce from '../../../hooks/useOnce';
@@ -22,8 +22,10 @@ import { $isHorizontalRuleNode, INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/
 import { deserialized, parseJText } from '../../../core/tellraw/parse';
 
 const Wrapper = styled.div`
+    position: sticky;
+    top: 0;
     margin-bottom: 8px;
-
+    background: #fff;
     .text-btn {
         display: inline-block;
         font-size: 20px;
@@ -199,6 +201,13 @@ export default function ToolbarPlugin(props: {
                         node.setFormat(0)
                         node.setStyle('')
                         $getNearestBlockElementAncestorOrThrow(node).setFormat('')
+                    }
+                    const parentNode = node.getParent()
+                    if ($isMarkNode(parentNode)) {
+                        const id = parentNode.getIDs()[0]
+                        nodeKeyMap.delete(id)
+                        cacheEventMap.delete(id)
+                        $unwrapMarkNode(parentNode)
                     }
                     if ($isMarkNode(node)) {
                         const id = node.getIDs()[0]
@@ -393,14 +402,53 @@ export default function ToolbarPlugin(props: {
                 }
 
                 const nodes = selection.extract()
-                console.log(nodes)
                 const result: SerializedLexicalNode[][] = []
                 let tmpSerializedNode: SerializedLexicalNode[] = []
 
                 let isFirstParagraphNode = true
 
+                // 处理边缘情况
+                // 1
+                const firstNode = nodes[0]
+                if ($isTextNode(firstNode)) {
+                    const parentNode = firstNode.getParent()
+                    if ($isMarkNode(parentNode)) {
+                        nodes.unshift(parentNode)
+                    }
+                }
+                // 2
+                const textNodes: TextNode[] = []
+                for (let i = 0; i < nodes.length; i++) {
+                    const node = nodes[i]
+                    if ($isMarkNode(node)) {
+                        const childrenKeys = node.getChildrenKeys()
+                        if (textNodes.length === node.getChildrenSize() && textNodes.every(textNode => childrenKeys.includes(textNode.getKey()))) {
+                            nodes.unshift(...nodes.splice(i, 1))
+                        }
+                        textNodes.length = 0
+                        break
+                    }
+                    textNodes.push(node as TextNode)
+                }
+
+                // for (let i = nodes.length - 1; i >= 0; i--) {
+                //     const node = nodes[i]
+                //     if ($isMarkNode(node)) {
+                //         const childrenKeys = node.getChildrenKeys()
+                //         if (textNodes.length !== childrenKeys.length) {
+                //             const newMarkNode = $createMarkNode(node.getIDs())
+                //             newMarkNode.append(...textNodes)
+                //             nodes[i] = newMarkNode
+                //         }
+                //         textNodes.length = 0
+                //         break
+                //     }
+                //     textNodes.push(node as TextNode)
+                // }
+
                 for (let i = 0; i < nodes.length; i+=offset) {
-                    const node = nodes[i];
+                    const node = nodes[i]
+
                     if ($isTextNode(node)) {
                         tmpSerializedNode.push(node.exportJSON())
                         offset = 1
@@ -454,19 +502,20 @@ export default function ToolbarPlugin(props: {
                         message.warning('sign 最多支持四行文本！')
                         return
                     }
-                    const text = result.map((item, index) => `Text${index + 1}:'[${toStringify(transform(item, eventList))}]'`).join(',')
+                    const text = result.map((item, index) => `Text${index + 1}:'${inlineEscape(toStringify(transform(item, eventList)))}'`).join(',')
                     str = state.tplMap.sign.replace('%s', text)
                 } else if (type === 'book') {
                     const text = result.map(item => {
                         const props = transform(item, eventList)
-                        return `'[${toStringify(props, true).replace(/\\"/g, '"').replace(/\\n/g, '\\\\n')}]'`
+                        return "'" + inlineEscape(toStringify(props)) + "'"
                     }).join(',')
                     str = state.tplMap.book.replace('%s', text)
                 } else {
-                    str = '["",' + toStringify(transform(result[0], eventList)) + ']'
+                    str = toStringify(transform(result[0], eventList))
                 }
                 copy(str)
                 message.success('已复制到剪贴版')
+                                
             }
         })
     }
@@ -505,7 +554,7 @@ export default function ToolbarPlugin(props: {
                 </ColorPicker>
                 <ClearOutlined title='清除格式' className='text-btn-item' onClick={clearFormatting}/>
                 <FunctionOutlined title='添加功能' className={clsx('text-btn-item', { disabled: hasSelectedMarkOrParagraphNode })} onClick={() => {
-                    editor.dispatchCommand(INSERT_INLINE_COMMAND, null)
+                    editor.dispatchCommand(INSERT_INLINE_COMMAND, undefined)
                 }} />
                 <LineOutlined title='分隔符' className='text-btn-item' onClick={() => {
                     activeEditor.dispatchCommand(

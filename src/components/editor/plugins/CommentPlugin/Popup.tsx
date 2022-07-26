@@ -1,6 +1,7 @@
 import { createDOMRange, createRectsFromDOMRange } from "@lexical/selection";
+import { mergeRegister } from "@lexical/utils";
 import { Row, Col, Input, Radio, Select, Tooltip, Button, Divider, Checkbox } from "antd";
-import { NodeKey, LexicalEditor, $getSelection, $isRangeSelection, $getNodeByKey } from "lexical";
+import { NodeKey, LexicalEditor, $getSelection, $isRangeSelection, $getNodeByKey, COMMAND_PRIORITY_CRITICAL, UNDO_COMMAND, REDO_COMMAND } from "lexical";
 import { useRef, useCallback, useEffect, useContext, useMemo, useState } from "react";
 import styled from "styled-components";
 import { cacheEventMap } from ".";
@@ -283,7 +284,7 @@ export function Popup(props: {
     
     const eventListItem = useMemo(
         () => {
-            return eventList.find(item => item.id === props.id)
+            return eventList.filter(Boolean).find(item => item.id === props.id)
         },
         [eventList, props.id]
     )
@@ -328,32 +329,39 @@ export function Popup(props: {
     }, [props.editor, updatePosition])
 
     useEffect(
-        () => updatePosition(),
+        () => {
+            updatePosition()
+        },
         [props.id, props.editor, updatePosition]
     )
 
-    if (! eventListItem) {
-        return null
-    }
-
     const update = useCallback(
         (partialState: Partial<JSONEventObject>) => {
-            const newEventListItem = partialUpdate(eventListItem, partialState)
-            cacheEventMap.set(eventListItem.id, newEventListItem)
-            dispatch({
-                type: 'UpdateTrigger'
-            })
+            if (eventListItem) {
+                const newEventListItem = partialUpdate(eventListItem, partialState)
+                cacheEventMap.set(eventListItem.id, newEventListItem)
+                dispatch({
+                    type: 'UpdateTrigger'
+                })
+            }
         },
         [eventListItem]
     )
 
     const hoverPlacehoder = useMemo(() => {
+        if (! eventListItem) {
+            return ''
+        }
         return {
             show_text: '选填，合法的json会被解析成组件',
             show_item: '选填，{ id, count, tag }',
             show_entity: '选填，{ name, tyoe, id }',
         }[eventListItem.hoverEvent.action]
-    }, [eventListItem.hoverEvent.action])
+    }, [eventListItem?.hoverEvent?.action])
+
+    if (! eventListItem) {
+        return null
+    }
 
     return (
         <WrapperPanel ref={boxRef}>

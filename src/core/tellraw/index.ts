@@ -2,9 +2,9 @@ import { SerializedMarkNode } from '@lexical/mark/MarkNode';
 import { SerializedLexicalNode, SerializedTextNode } from 'lexical';
 import { SerializedEditorState } from 'lexical';
 import { JSONEventObject } from '../../store';
-import { clone, escape, isObject } from '../../utils';
+import { clone, isObject } from '../../utils';
 import PresetColor from './color';
-import { ClickToken, HoverToken, ScoreToken, TranslateToken } from './model';
+import { ClickToken, HoverToken, TranslateToken } from './model';
 
 const IS_BOLD = 1
 const IS_ITALIC = 1 << 1
@@ -78,6 +78,14 @@ function getStyle(node: SerializedTextNode): JSONTextProps {
     }
 }
 
+function tryParse(rawtext: string) {
+    try {
+        return JSON.parse(rawtext)
+    } catch (error) {
+        return rawtext
+    }
+}
+
 function toJSONEventProps(comment: JSONEventObject) {
     const result: JSONEventProps = {}
     if (!! comment.clickEvent.value) {
@@ -102,7 +110,7 @@ function toJSONEventProps(comment: JSONEventObject) {
                 result.interpret = interpret
             }
             if (separator) {
-                result.separator = separator
+                result.separator = removeEvent(tryParse(separator))
             }
         }
     } else if (comment.type === 'score') {
@@ -173,7 +181,7 @@ export function toJSONText(node: SerializedEditorState, configList: JSONEventObj
     return transform(children, configList)
 }
 
-function clickEventStringify(clickEvent: ClickToken, needEscape = false) {
+function clickEventStringify(clickEvent: ClickToken) {
     let { action, value } = clickEvent
     if (action === 'run_command' && !value.startsWith('/')) {
         value = '/' + value
@@ -181,64 +189,47 @@ function clickEventStringify(clickEvent: ClickToken, needEscape = false) {
     return {
         clickEvent: {
             ["action"]: action,
-            ["value"]: needEscape ? escape(value) : value
+            ["value"]: value
         }
     }
 }
 
 function removeEvent(obj: any) {
     const removeProps = (json: any) => {
-        const { clickEvent, hoverEvent, insertion, ...rest } = json
-        return rest
+        if (isObject(json)) {
+            const { clickEvent, hoverEvent, insertion, ...rest } = json
+            return rest
+        }
+        return json
     }
     if (Array.isArray(obj)) {
-        return obj.map((item: any) => {
-            if (isObject(item)) {
-                return removeProps(item)
-            }
-            return item
-        })
+        return obj.map((item: any) => removeProps(item))
     } else {
         return removeProps(obj)
     }
 }
 
-function hoverEventStringify(hoverEvent: HoverToken, needEscape = false) {
+function hoverEventStringify(hoverEvent: HoverToken) {
     const { action, value } = hoverEvent
-    let json
-    try {
-        // try parse text
-        const obj = JSON.parse(value)
-        if (isObject(obj)) {
-            json = removeEvent(obj)
-        } else {
-            throw 'cannot parse'
-        }
-    } catch (error) {}
     
     return {
         hoverEvent: {
-            ["action"]: action,
-            ["value"]: json ? json : needEscape ? escape(value) : value,
+            action,
+            value: removeEvent(tryParse(value)),
         }
     }
 }
 
-function translateStringify(translate: TranslateToken, needEscape = false) {
-    let withObj = translate.with
-    try {
-        const obj = JSON.parse(translate.with)
-        withObj = obj
-    } catch (error) {}
+function translateStringify(translate: TranslateToken) {
     return {
         translate: translate.translate,
-        with: withObj
+        with: tryParse(translate.with)
     }
 }
 
-export function toStringify(jsonItems: JSONProps[], needEscape = false) {
+export function toStringify(jsonItems: JSONProps[]) {
 
-    return jsonItems.map(item => {
+    const handle = (item: JSONProps) => {
         const {
             text, 
             clickEvent,
@@ -250,10 +241,10 @@ export function toStringify(jsonItems: JSONProps[], needEscape = false) {
 
         const props = {
             ...rest,
-            text: escape(text),
-            ...(translate && translateStringify({ translate, with: withObj! }, needEscape)),
-            ...(clickEvent && clickEventStringify(clickEvent, needEscape)),
-            ...(hoverEvent && hoverEventStringify(hoverEvent, needEscape)),
+            text,
+            ...(translate && translateStringify({ translate, with: withObj! })),
+            ...(clickEvent && clickEventStringify(clickEvent)),
+            ...(hoverEvent && hoverEventStringify(hoverEvent)),
         } as any
 
         if (props.nbt || props.score || props.selector || props.keybind || props.translate) {
@@ -261,7 +252,11 @@ export function toStringify(jsonItems: JSONProps[], needEscape = false) {
         }
 
         return JSON.stringify(props)
+    }
+    if (jsonItems.length === 1) {
+        return handle(jsonItems[0])
+    }
 
-    }).join(',')
+    return '["",' + jsonItems.map(item => handle(item)).join(',') + ']'
 
 }
