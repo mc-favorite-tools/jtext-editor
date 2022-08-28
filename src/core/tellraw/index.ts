@@ -298,6 +298,7 @@ export function toStringify(jsonItems: JSONProps[]) {
         return handle(optimizeItems[0])
     }
 
-    return '["",' + optimizeItems.map(item => handle(item)).join(',') + ']'
+    const str = optimizeItems.map(item => handle(item)).join(',')
+    return (str.startsWith('"') ? '[' : '["",') + str + ']'
 
 }
