@@ -14,7 +14,7 @@ import { cacheEventMap, INSERT_INLINE_COMMAND, nodeKeyMap } from './CommentPlugi
 import { AppContext, defaultTplMap } from '../../../store';
 import { bindEvent, copy, createTime, createUID, escape, inlineEscape } from '../../../utils';
 import { $createMarkNode, $isMarkNode, $unwrapMarkNode } from '@lexical/mark';
-import { Dropdown, Input, InputRef, Menu, message, Modal, Select } from 'antd';
+import { Button, Dropdown, Input, InputRef, Menu, message, Modal, notification, Select } from 'antd';
 import { toStringify, transform } from '../../../core/tellraw';
 import useOnce from '../../../hooks/useOnce';
 import * as idbKeyval from 'idb-keyval'
@@ -56,6 +56,9 @@ const Wrapper = styled.div`
         }
     }
 `
+
+const noWindowShow = 'no-window-show'
+const noCommandShow = 'no-command-show'
 
 export default function ToolbarPlugin(props: {
     visible: boolean
@@ -415,6 +418,12 @@ export default function ToolbarPlugin(props: {
                     if ($isMarkNode(parentNode)) {
                         nodes.unshift(parentNode)
                     }
+                    for (let i = 0; i < nodes.length; i++) {
+                        if (nodes[i] === parentNode) {
+                            nodes.splice(i, 1)
+                            break
+                        }
+                    }
                 }
                 // 2
                 const textNodes: TextNode[] = []
@@ -512,6 +521,32 @@ export default function ToolbarPlugin(props: {
                     str = state.tplMap.book.replace('%s', text)
                 } else {
                     str = toStringify(transform(result[0], eventList))
+                }
+                if (str.length >= 256 && !localStorage.getItem(noWindowShow)) {
+                    notification.warn({
+                        key: noWindowShow,
+                        duration: null,
+                        message: '超过聊天窗口字符限制，请使用命令方块或数据包！',
+                        btn: (
+                            <Button type='primary' onClick={() => {
+                                localStorage.setItem(noWindowShow, '1')
+                                notification.close(noWindowShow)
+                            }}>不再提示</Button>
+                        )
+                    })
+                }
+                if (str.length >= 32500 && !localStorage.getItem(noCommandShow)) {
+                    notification.warn({
+                        key: noCommandShow,
+                        duration: null,
+                        message: '超过命令方块字符限制，请使用数据包！',
+                        btn: (
+                            <Button type='primary' onClick={() => {
+                                localStorage.setItem(noCommandShow, '1')
+                                notification.close(noCommandShow)
+                            }}>不再提示</Button>
+                        )
+                    })
                 }
                 copy(str)
                 message.success('已复制到剪贴版')

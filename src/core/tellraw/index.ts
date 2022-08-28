@@ -2,7 +2,7 @@ import { SerializedMarkNode } from '@lexical/mark/MarkNode';
 import { SerializedLexicalNode, SerializedTextNode } from 'lexical';
 import { SerializedEditorState } from 'lexical';
 import { JSONEventObject } from '../../store';
-import { clone, isObject } from '../../utils';
+import { clone, equalObject, isObject } from '../../utils';
 import PresetColor from './color';
 import { ClickToken, HoverToken, TranslateToken } from './model';
 
@@ -58,6 +58,19 @@ export interface JSONEventProps {
 
 export type JSONProps = Spread<JSONTextProps, JSONEventProps>
 
+function simplifyStyle(style: any) {
+    const obj: Omit<JSONTextProps, 'text'> = {}
+
+    if (style.bold) obj.bold = style.bold
+    if (style.italic) obj.italic = style.italic
+    if (style.obfuscated) obj.obfuscated = style.obfuscated
+    if (style.underlined) obj.underlined = style.underlined
+    if (style.strikethrough) obj.strikethrough = style.strikethrough
+    if (style.color) obj.color = style.color
+
+    return obj
+}
+
 function getStyle(node: SerializedTextNode): JSONTextProps {
     const bold = !!(node.format & IS_BOLD)
     const italic = !!(node.format & IS_ITALIC)
@@ -68,12 +81,14 @@ function getStyle(node: SerializedTextNode): JSONTextProps {
     const text = node.text
 
     return {
-        ...(bold && { bold }),
-        ...(italic && { italic }),
-        ...(strikethrough && { strikethrough }),
-        ...(underline && { underlined: underline }),
-        ...(obfuscated && { obfuscated }),
-        ...(color && { color }),
+        ...simplifyStyle({
+            color,
+            bold,
+            italic,
+            obfuscated,
+            underlined: underline,
+            strikethrough
+        }),
         text,
     }
 }
@@ -229,6 +244,27 @@ function translateStringify(translate: TranslateToken) {
 
 export function toStringify(jsonItems: JSONProps[]) {
 
+    // optimize, merge white char and same style
+    const optimizeItems: JSONProps[] = []
+    for (const item of jsonItems) {
+        const { text, ...rest } = item
+        const prev = optimizeItems.at(-1)
+        if (prev) {
+            const { text: prevText, ...prevRest } = prev
+            if (text.trim() === '' && Object.keys(rest).length === 0) {
+                prev.text += text
+                continue
+            }
+            if (equalObject(rest, prevRest)) {
+                prev.text += text
+                continue
+            }
+        }
+
+        optimizeItems.push(item)
+    }
+
+
     const handle = (item: JSONProps) => {
         const {
             text, 
@@ -249,14 +285,19 @@ export function toStringify(jsonItems: JSONProps[]) {
 
         if (props.nbt || props.score || props.selector || props.keybind || props.translate) {
             delete props.text
+        } else {
+            if (Object.keys(props).length === 1) {
+                return JSON.stringify(text)
+            }
         }
 
         return JSON.stringify(props)
     }
-    if (jsonItems.length === 1) {
-        return handle(jsonItems[0])
+
+    if (optimizeItems.length === 1) {
+        return handle(optimizeItems[0])
     }
 
-    return '["",' + jsonItems.map(item => handle(item)).join(',') + ']'
+    return '["",' + optimizeItems.map(item => handle(item)).join(',') + ']'
 
 }

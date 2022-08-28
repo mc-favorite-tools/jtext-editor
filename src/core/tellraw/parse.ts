@@ -87,10 +87,9 @@ export function parseJText(rawnbt: string) {
                 arr = [arr]
             }
 
-            const tokens = arr.filter(Boolean).map(item => createJsonToken({
-                ...item,
-                text: item.text
-            }))
+            const tokens = arr.filter(Boolean).map(item => {
+                return createJsonToken(item)
+            })
             resolve([tokens])
         } catch {
             try {

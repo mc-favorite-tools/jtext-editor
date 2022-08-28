@@ -1,12 +1,9 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Drawer, Input, Select, Table } from "antd";
 import { ColumnType } from "antd/lib/table";
-import { SerializedEditorState } from "lexical";
 import { useCallback, useContext, useMemo } from "react";
 import styled from "styled-components";
-import { toJSONText, toStringify } from "../../../../core/tellraw";
 import { AppContext, defaultTplMap, JsonTile } from "../../../../store";
-import { cacheEventMap } from "../CommentPlugin";
 
 const Wrapper = styled.div`
     a.disabled {
@@ -23,14 +20,6 @@ export default function JsonTablePlugin(props: {
 }) {
     const [state, dispatch] = useContext(AppContext)
     const [editor] = useLexicalComposerContext()
-
-    const format = useCallback(
-        (data: SerializedEditorState) => {
-            const eventList = Array.from(cacheEventMap.values())
-            return toStringify(toJSONText(data, eventList))
-        },
-        [state.jsonList]
-    )
 
     const columns: ColumnType<JsonTile>[] = [
         {
