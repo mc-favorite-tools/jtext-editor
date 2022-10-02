@@ -355,7 +355,7 @@ export function Popup(props: {
         return {
             show_text: '选填，合法的json会被解析成组件',
             show_item: '选填，{ id, count, tag }',
-            show_entity: '选填，{ name, tyoe, id }',
+            show_entity: '选填，{ name, type, id }',
         }[eventListItem.hoverEvent.action]
     }, [eventListItem?.hoverEvent?.action])
 
