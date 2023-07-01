@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import './index.css';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import * as React from 'react';

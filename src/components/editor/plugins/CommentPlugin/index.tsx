@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { $getRoot, COMMAND_PRIORITY_CRITICAL, LexicalCommand, NodeKey, REDO_COMMAND, UNDO_COMMAND, } from 'lexical';
 import { $createMarkNode, $getMarkIDs, $isMarkNode, $unwrapMarkNode, $wrapSelectionInMarkNode, MarkNode, } from '@lexical/mark';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';

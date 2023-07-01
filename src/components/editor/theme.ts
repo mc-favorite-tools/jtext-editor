@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { EditorThemeClasses } from "lexical"
 import './theme.css'
 

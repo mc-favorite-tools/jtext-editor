@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
 import { $getNodeByKey, COMMAND_PRIORITY_EDITOR, COMMAND_PRIORITY_HIGH, DecoratorNode, EditorConfig, FORMAT_TEXT_COMMAND, LexicalEditor, LexicalNode, NodeKey, SELECTION_CHANGE_COMMAND, SerializedLexicalNode, Spread } from "lexical";

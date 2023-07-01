@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { NodeKey, SerializedEditorState } from "lexical"
 import { createContext, useReducer } from "react"
 import { ClickToken, HoverToken, ScoreToken, NbtToken, TranslateToken } from "../core/tellraw/model"

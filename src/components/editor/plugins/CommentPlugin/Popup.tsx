@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { createDOMRange, createRectsFromDOMRange } from "@lexical/selection";
 import { mergeRegister } from "@lexical/utils";
 import { Row, Col, Input, Radio, Select, Tooltip, Button, Divider, Checkbox } from "antd";

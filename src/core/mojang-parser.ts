@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 class Nbt {
     public static text: string = ''
     public static eat(length: number) {

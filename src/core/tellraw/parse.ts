@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { $createMarkNode, $isMarkNode, MarkNode } from "@lexical/mark"
 import { $createHorizontalRuleNode, HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode"
 import { $createParagraphNode, $createTextNode, $isParagraphNode, LexicalNode, NodeKey, ParagraphNode } from "lexical"

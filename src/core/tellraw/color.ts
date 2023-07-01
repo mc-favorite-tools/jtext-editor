@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 const PresetColor = [
     { name: '黑色', id: 'black', sc: '#000000', fc: '#000000', bc: '#000000' },
     { name: '深蓝色', id: 'dark_blue', sc: '#0000b2', fc: '#0000aa', bc: '#00002a' },

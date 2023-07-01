@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { useEffect } from "react"
 import styled from "styled-components"
 import { Editor } from "./components/editor"

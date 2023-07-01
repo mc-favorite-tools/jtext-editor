@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getSelection, $isRangeSelection, $setSelection, EditorConfig, LexicalNode, NodeKey, SerializedTextNode, Spread, TextNode } from "lexical";
 
@@ -9,6 +13,7 @@ export type SerializedObfuscatedNode = Spread<
 >;
 
 export class ObfuscatedNode extends TextNode {
+
 
     static getType(): string {
         return 'obfuscated'

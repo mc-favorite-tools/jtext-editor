@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 
 export const KeybindList = [
     { id: 'key.jump', name: '', en: 'Jump' },

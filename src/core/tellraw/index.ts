@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { SerializedMarkNode } from '@lexical/mark/MarkNode';
 import { SerializedLexicalNode, SerializedTextNode } from 'lexical';
 import { SerializedEditorState } from 'lexical';

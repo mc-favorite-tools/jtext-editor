@@ -1,3 +1,7 @@
+/*
+ * The AGPL License (AGPL)
+ * Copyright (c) 2023 hans000
+ */
 import { DOMExportOutput, EditorConfig, LexicalEditor, LexicalNode, SerializedTextNode, Spread } from 'lexical';
 import { TextNode } from 'lexical';
 
