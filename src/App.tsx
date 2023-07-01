@@ -73,10 +73,10 @@ function App() {
             </H1>
             <Editor />
             <Footer>
-                <a target={'_blank'} href="https://github.com/hans000/jtext-editor/issues">问题反馈</a>
-                <a target={'_blank'} title="916625813" href="https://jq.qq.com/?_wv=1027&k=onvGmdy5">加入群聊</a>
-                <img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg" />
-                <span>by hans0000</span>
+                <span style={{ margin: 4 }}>Copyright © {new Date().getFullYear()} by </span>
+                <a style={{ textDecoration: 'none' }} href="https://github.com/hans000/mc-advancement-viewer" target="_blank"> hans000</a>
+                <span>QQ: 2112717288</span>
+                <a style={{ margin: 4 }} target={'_blank'} href="https://github.com/mc-favorite-tools/jtext-editor/issues">问题反馈</a>
             </Footer>
         </AppContext.Provider>
     )
