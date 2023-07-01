@@ -56,16 +56,16 @@ export default defineConfig({
         //         }
         //     ]
         // }),
-        // styleImport({
-        //   libs: [
-        //     {
-        //       libraryName: 'antd',
-        //       esModule: true,
-        //       resolveStyle: (name) => {
-        //         return `antd/es/${name}/style/index`
-        //       },
-        //     },
-        //   ]
-        // })
+        styleImport({
+          libs: [
+            {
+              libraryName: 'antd',
+              esModule: true,
+              resolveStyle: (name) => {
+                return `antd/es/${name}/style/index`
+              },
+            },
+          ]
+        })
     ]
 })

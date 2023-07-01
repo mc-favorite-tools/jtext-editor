@@ -9,6 +9,7 @@ import { cacheEventMap, nodeKeyMap } from "./components/editor/plugins/CommentPl
 import { AppContext, useAppReducer } from "./store"
 import { bindEvent, toObject } from "./utils"
 import * as idbKeyval from 'idb-keyval'
+import 'antd/dist/antd.min.css'
 
 const H1 = styled.h1`
     margin-top: 16px;
