@@ -77,6 +77,7 @@ function App() {
                 <a style={{ textDecoration: 'none' }} href="https://github.com/hans000/mc-advancement-viewer" target="_blank"> hans000</a>
                 <span>QQ: 2112717288</span>
                 <a style={{ margin: 4 }} target={'_blank'} href="https://github.com/mc-favorite-tools/jtext-editor/issues">问题反馈</a>
+                <img style={{ marginBottom: 2 }} src="https://badges.toozhao.com/badges/01H6FN9F21WTTHM73TPNSNA088/green.svg" />
             </Footer>
         </AppContext.Provider>
     )
