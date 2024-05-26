@@ -496,7 +496,7 @@ export default function ToolbarPlugin(props: {
                             tmpSerializedNode = []
                         }
                     }
-                    if (type === 'book' && $isHorizontalRuleNode(node)) {
+                    if (type.startsWith('book') && $isHorizontalRuleNode(node)) {
                         result.push(tmpSerializedNode)
                         tmpSerializedNode = []
                     }
@@ -523,6 +523,21 @@ export default function ToolbarPlugin(props: {
                         return "'" + inlineEscape(toStringify(props)) + "'"
                     }).join(',')
                     str = state.tplMap.book.replace('%s', text)
+                } else if (type === 'sign+') {
+                    if (result.length > 4) {
+                        message.warning('sign 最多支持四行文本！')
+                        return
+                    }
+                    const lastList = Array.from({ length: 4 - result.length }, () => '\'""\'')
+                    const mainTextList = result.map(item => `'${inlineEscape(toStringify(transform(item, eventList)))}'`)
+                    const text = `[${[...mainTextList, ...lastList].join(',')}]`
+                    str = state.tplMap['sign+'].replace('%s', text)
+                } else if (type === 'book+') {
+                    const text = result.map(item => {
+                        const props = transform(item, eventList)
+                        return "'" + inlineEscape(toStringify(props)) + "'"
+                    }).join(',')
+                    str = state.tplMap['book+'].replace('%s', text)
                 } else {
                     str = toStringify(transform(result[0], eventList))
                 }
@@ -622,6 +637,8 @@ export default function ToolbarPlugin(props: {
                     { label: 'title', key: 'title', },
                     { label: 'sign', key: 'sign', },
                     { label: 'book', key: 'book', },
+                    { label: 'sign+', key: 'sign+', },
+                    { label: 'book+', key: 'book+', },
                 ]}/>}>
                     <CopyOutlined title='对选取内生成nbt' className={clsx('text-btn-item', { disabled: !isSelected })} />
                 </Dropdown>
