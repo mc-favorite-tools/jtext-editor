@@ -46,8 +46,9 @@ export const defaultTplMap: Record<string, string> = {
     title: '/title @p title %s',
     sign: '/give @p oak_sign{BlockEntityTag:{%s}}',
     book: '/give @p written_book{pages:[%s],title:"",author:"made by JText Editor"}',
+    'sign+': '/give @p oak_sign[minecraft:block_entity_data={id:"",front_text:{messages:%s}}]',
+    'book+': '/give @p written_book[minecraft:written_book_content={pages:[%s],title:"",author:"made by JText Editor"}]',
 }
-
 
 interface IState {
     jsonList: JsonTile[]
