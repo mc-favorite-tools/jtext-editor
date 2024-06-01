@@ -416,19 +416,19 @@ export default function ToolbarPlugin(props: {
 
                 // 处理边缘情况
                 // 1
-                const firstNode = nodes[0]
-                if ($isTextNode(firstNode)) {
-                    const parentNode = firstNode.getParent()
-                    if ($isMarkNode(parentNode)) {
-                        nodes.unshift(parentNode)
-                    }
-                    for (let i = 0; i < nodes.length; i++) {
-                        if (nodes[i] === parentNode) {
-                            nodes.splice(i, 1)
-                            break
-                        }
-                    }
-                }
+                // const firstNode = nodes[0]
+                // if ($isTextNode(firstNode)) {
+                //     const parentNode = firstNode.getParent()
+                //     if ($isMarkNode(parentNode)) {
+                //         nodes.unshift(parentNode)
+                //     }
+                //     for (let i = 0; i < nodes.length; i++) {
+                //         if (nodes[i] === parentNode) {
+                //             nodes.splice(i, 1)
+                //             break
+                //         }
+                //     }
+                // }
                 // 2
                 const textNodes: TextNode[] = []
                 for (let i = 0; i < nodes.length; i++) {
