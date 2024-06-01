@@ -15,9 +15,8 @@ import { MarkNode } from '@lexical/mark';
 import JsonTablePlugin from './plugins/JsonTablePlugin';
 import ObfuscatedPlugin from './plugins/ObfuscatedPlugin';
 import { Slider } from 'antd';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useState } from 'react';
 import { AppContext } from '../../store';
-import { $getRoot } from 'lexical';
 import HorizontalRulePlugin from './plugins/HorizontalRulePlugin';
 import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode';
 
@@ -35,12 +34,6 @@ const Wrapper = styled.div`
         font-size: 16px;
     }
 `
-
-function onChange(editorState: any) {
-    editorState.read(() => {
-
-    })
-}
 
 export function Editor() {
     const [state, dispatch] = useContext(AppContext)
@@ -73,7 +66,11 @@ export function Editor() {
                         }} />}
                     placeholder={''}
                 />
-                <OnChangePlugin onChange={onChange} />
+                <OnChangePlugin onChange={(editorState) => {
+                    editorState.read(() => {
+                        
+                    })
+                }} />
                 <CommentPlugin />
                 <HistoryPlugin />
                 <ObfuscatedPlugin />
